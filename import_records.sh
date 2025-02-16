@@ -1,42 +1,45 @@
 #!/bin/bash
-set -e
 
-# Directory containing your YAML files
-DNS_ZONES_DIR="dns_zones"
+echo "Starting Route 53 record import..."
 
 # Loop through each YAML file in the dns_zones directory
-for zone_file in "$DNS_ZONES_DIR"/*.yml; do
-  if [ -f "$zone_file" ]; then
-    # Read the zone_name from the YAML file using yq
-    DOMAIN_NAME=$(yq eval '.zone_name' "$zone_file")
-    echo "Processing domain: $DOMAIN_NAME"
+for file in dns_zones/*.yml; do
+  # Extract the domain name from the zone file
+  zone_name=$(yq e '.zone_name' "$file")
+  echo "Processing zone: $zone_name"
 
-    # Dynamically fetch the hosted zone ID for the domain name
-    HOSTED_ZONE_ID=$(aws route53 list-hosted-zones --query "HostedZones[?Name=='${DOMAIN_NAME}.'].Id" --output text)
-
-    if [ "$HOSTED_ZONE_ID" == "None" ]; then
-      echo "Error: Hosted Zone for $DOMAIN_NAME not found!"
-      continue
-    fi
-
-    # Remove the '/hostedzone/' prefix from the Hosted Zone ID
-    HOSTED_ZONE_ID=$(echo "$HOSTED_ZONE_ID" | sed 's#/hostedzone/##')
-
-    echo "Fetching existing Route 53 records for Hosted Zone ID: $HOSTED_ZONE_ID..."
-
-    # Fetch the current records in the hosted zone
-    aws route53 list-resource-record-sets --hosted-zone-id "$HOSTED_ZONE_ID" | jq -c '.ResourceRecordSets[]' | while read -r record; do
-      NAME=$(echo "$record" | jq -r '.Name')
-      TYPE=$(echo "$record" | jq -r '.Type')
-
-      # Terraform import format: terraform import aws_route53_record.<RESOURCE_NAME> <ZONE_ID>_<RECORD_NAME>_<RECORD_TYPE>
-      RESOURCE_NAME=$(echo "$NAME" | tr -d '.' | tr -d '*' | tr '[:upper:]' '[:lower:]')_$TYPE
-      IMPORT_CMD="terraform import aws_route53_record.${RESOURCE_NAME} ${HOSTED_ZONE_ID}_${NAME}_${TYPE}"
-
-      echo "Importing: $IMPORT_CMD"
-      $IMPORT_CMD || echo "Failed to import $NAME ($TYPE), skipping..."
-    done
-
-    echo "Route 53 record import completed for $DOMAIN_NAME."
+  # Get the Route 53 hosted zone ID (assuming this is done outside the loop, adjust as necessary)
+  zone_id=$(aws route53 list-hosted-zones-by-name --dns-name "$zone_name" --query "HostedZones[0].Id" --output text)
+  
+  if [[ "$zone_id" == "None" ]]; then
+    echo "Error: Zone ID not found for $zone_name"
+    continue
   fi
+
+  # Loop through each record in the YAML file and import it
+  records=$(yq e '.records[]' "$file")
+  
+  for record in $records; do
+    # Extract record details from YAML
+    record_name=$(echo $record | jq -r .name)
+    record_type=$(echo $record | jq -r .type)
+    record_value=$(echo $record | jq -r .value)
+    
+    # Generate a Terraform configuration block for this record
+    cat <<EOF >> route53_import.tf
+resource "aws_route53_record" "${zone_name}_${record_name}_${record_type}" {
+  zone_id = "$zone_id"
+  name    = "$record_name"
+  type    = "$record_type"
+  ttl     = 300
+  records = ["$record_value"]
+}
+EOF
+
+    # Now import the record using the generated Terraform configuration
+    terraform import aws_route53_record.${zone_name}_${record_name}_${record_type} "${zone_id}_${record_name}"
+    
+  done
 done
+
+echo "Route 53 record import completed."
