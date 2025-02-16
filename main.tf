@@ -26,7 +26,7 @@ locals {
   # Group records by zone_name manually
   grouped_dns_zones = {
     for record in local.dns_zones :
-    record.zone_name => (lookup(local.grouped_dns_zones, record.zone_name, [])... + [record])
+    record.zone_name => (lookup(local.grouped_dns_zones, record.zone_name, []) + [record])
   }
 }
 
