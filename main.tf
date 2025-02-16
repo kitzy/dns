@@ -24,27 +24,39 @@ locals {
   ])
 }
 
-# Fetch the Route 53 zones from AWS
-data "aws_route53_zone" "selected" {
-  for_each = {
-    for zone_data in local.dns_zones_input : zone_data["zone_name"] => zone_data
-  }
-  name = each.key
+# Fetch existing records from Route 53
+data "aws_route53_zone" "dns_zone" {
+  name = "<zone-name>"
 }
 
-# Output block
-output "dns_zones" {
-  value = local.dns_zones
+data "aws_route53_records" "existing_records" {
+  zone_id = data.aws_route53_zone.dns_zone.id
 }
 
-# Create the Route 53 DNS records based on the YAML data
+# Update your dns_zones variable to include only records that need to be created
+locals {
+  new_records = flatten([
+    for zone_file, zone_data in local.dns_zones : [
+      for record in zone_data["records"] : {
+        zone_name = zone_data["zone_name"]
+        name      = record["name"]
+        type      = record["type"]
+        ttl       = record["ttl"]
+        values    = record["values"]
+      }
+    ]
+  ])
+
+  # Only include records that do not already exist
+  records_to_create = [
+    for r in local.new_records : r if !(r in data.aws_route53_records.existing_records.records)
+  ]
+}
+
 resource "aws_route53_record" "dns_records" {
-  for_each = {
-    for record in local.dns_zones :
-    "${record["zone_name"]}_${record["name"]}_${record["type"]}" => record
-  }
+  for_each = { for record in local.records_to_create : "${record.zone_name}_${record.name}_${record.type}" => record }
 
-  zone_id = data.aws_route53_zone.selected[each.value.zone_name].id
+  zone_id = data.aws_route53_zone.dns_zone.id
   name    = each.value.name
   type    = each.value.type
   ttl     = each.value.ttl
