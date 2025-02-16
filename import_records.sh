@@ -26,7 +26,7 @@ for FILE in $FILES; do
   fi
 
   # Read records from the YAML file and convert to JSON format
-  RECORDS_JSON=$(yq e '.records' "$FILE" | yq e -j '.')
+  RECORDS_JSON=$(yq e '.records' "$FILE" | yq e -o=json '.')
 
   # Debugging: Output the raw extracted records to check if it's valid JSON
   echo "Raw extracted records from $FILE:"
