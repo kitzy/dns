@@ -28,6 +28,10 @@ jobs:
       - name: Initialize Terraform
         run: terraform init
 
+      - name: Print DNS Zone YAML files
+        run: |
+          cat dns_zones/*.yml
+
       - name: Show Terraform Plan
         run: terraform plan
 
