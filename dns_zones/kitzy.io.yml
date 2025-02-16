@@ -75,3 +75,8 @@ records:
     type: CNAME
     values:
       - "home.kitzy.io."
+  - name: test
+    ttl: 300
+    type: TXT
+    values:
+      - "It works"
