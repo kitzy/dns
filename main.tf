@@ -29,7 +29,7 @@ locals {
     for record in local.dns_zones :
     # Group records by zone_name
     merge(initial_group, { 
-      record.zone_name => (
+      record.zone_name = (
         lookup(initial_group, record.zone_name, []) + [record]
       )
     })
