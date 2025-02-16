@@ -53,7 +53,8 @@ locals {
 
   # Only include records that are not already in the existing records
   records_to_create = [
-    for r in local.new_records : r if !(r.name in local.existing_record_names)
+    for r in local.new_records : 
+    r if !(r.name in local.existing_record_names)
   ]
 }
 
