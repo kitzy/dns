@@ -23,7 +23,7 @@ data "aws_route53_zone" "existing" {
 
 # Create Route 53 Hosted Zones only if they don't exist
 resource "aws_route53_zone" "zones" {
-  for_each = { for name, zone in local.zones : name => zone if data.aws_route53_zone.existing[name].zone_id == "" }
+  for_each = { for name, zone in local.zones : name => zone if length(data.aws_route53_zone.existing[name].zone_id) == 0 }
 
   name = each.value.zone_name
   tags = {
@@ -39,13 +39,41 @@ locals {
   )
 }
 
-# Create DNS Records in the respective Zone
-resource "aws_route53_record" "records" {
-  for_each = merge([for zone_name, zone in local.final_zones : { for rec in zone.records :
-    "${rec.name}.${zone_name}_${rec.type}" => merge(rec, { zone_name = zone_name, zone_id = zone.zone_id }) }]...)
+# Fetch existing Route 53 records for each zone
+data "aws_route53_record" "existing_records" {
+  for_each = merge(flatten([
+    for zone_name, zone in local.final_zones : [
+      for rec in zone.records : {
+        key       = "${rec.name}.${zone_name}_${rec.type}"
+        zone_id   = zone.zone_id
+        name      = "${rec.name}.${zone_name}"
+        type      = rec.type
+      }
+    ]
+  ])...)
 
   zone_id = each.value.zone_id
-  name    = "${each.value.name}.${each.value.zone_name}"
+  name    = each.value.name
+  type    = each.value.type
+}
+
+# Create Route 53 DNS Records (import existing and create new ones)
+resource "aws_route53_record" "records" {
+  for_each = merge(flatten([
+    for zone_name, zone in local.final_zones : [
+      for rec in zone.records : {
+        key       = "${rec.name}.${zone_name}_${rec.type}"
+        zone_id   = zone.zone_id
+        name      = "${rec.name}.${zone_name}"
+        type      = rec.type
+        ttl       = rec.ttl
+        values    = rec.values
+      }
+    ]
+  ])...)
+
+  zone_id = each.value.zone_id
+  name    = each.value.name
   type    = each.value.type
   ttl     = each.value.ttl
   records = each.value.values

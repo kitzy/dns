@@ -13,8 +13,8 @@ records:
     ttl: 300
     type: TXT
     values:
-      - "\"google-site-verification=oN8rxZJ-seUiYtYwbAfVoqBsg9t9BDe7mzQWzwABZTA\""
-      - "\"keybase-site-verification=_t6kvEWhlm0JnE5I6-8hVCxF8NXp2g9sYCwNrpNcpUI\""
+      - "google-site-verification=oN8rxZJ-seUiYtYwbAfVoqBsg9t9BDe7mzQWzwABZTA"
+      - "keybase-site-verification=_t6kvEWhlm0JnE5I6-8hVCxF8NXp2g9sYCwNrpNcpUI"
   - name: cctv
     ttl: 300
     type: CNAME
