@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'dns_zones/**'
+  workflow_dispatch:
 
 jobs:
   terraform:
