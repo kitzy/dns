@@ -61,23 +61,23 @@ resource "null_resource" "import_records" {
 
   provisioner "local-exec" {
     command = <<EOT
-      # Loop through each YAML file to find existing records
+      #!/bin/bash
+      set -e
+
       for zone_file in $(find "${path.module}/dns_zones" -name "*.yml"); do
         zone_name=$(basename "$zone_file" .yml)
         zone_id=$(aws route53 list-hosted-zones --query "HostedZones[?Name=='$zone_name.'].Id" --output text | tr -d '[:space:]')
 
         if [ -z "$zone_id" ]; then
-          echo "No zone found for $zone_name"
+          echo "No hosted zone found for $zone_name"
           continue
         fi
 
-        # Extract record details and generate import commands
         jq -r '.records[] | "\(.name) \(.type)"' "$zone_file" | while read -r record_name record_type; do
-          formatted_record_name=$(echo "$record_name" | sed 's/\*/*/g')  # Handle wildcard records correctly
-          import_command="terraform import aws_route53_record.${zone_name}_${record_name}_${record_type} ${zone_id}_${formatted_record_name}_${record_type}"
-          
-          echo "Running: $import_command"
-          $import_command
+          formatted_record_name=$(echo "$record_name" | sed 's/\*/*/g')
+
+          echo "Importing: aws_route53_record.${zone_name}_${record_name}_${record_type}"
+          terraform import "aws_route53_record.${zone_name}_${record_name}_${record_type}" "${zone_id}_${formatted_record_name}_${record_type}"
         done
       done
     EOT
