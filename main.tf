@@ -24,17 +24,15 @@ resource "aws_route53_zone" "dns_zones" {
 # Create Route 53 Records for each zone
 resource "aws_route53_record" "dns_records" {
   for_each = {
-    for zone_file, zone_data in local.dns_zones :
-    for record in zone_data["records"] :
-    "${zone_data["zone_name"]}_${record["name"]}_${record["type"]}" => {
-      zone_name = zone_data["zone_name"]
-      record    = record
-    }
+    for zone_file, zone_data in local.dns_zones : 
+    for record in zone_data["records"] : 
+    "${zone_data["zone_name"]}_${record["name"]}_${record["type"]}" => record
   }
 
-  zone_id = aws_route53_zone.dns_zones[each.value["zone_name"]].id
-  name    = each.value["record"]["name"]
-  type    = each.value["record"]["type"]
-  ttl     = each.value["record"]["ttl"]
-  records = each.value["record"]["values"]
+  zone_id = data.aws_route53_zone.selected[each.value["zone_name"]].id
+  name    = each.value["name"]
+  type    = each.value["type"]
+  ttl     = each.value["ttl"]
+  records = each.value["values"]
 }
+
