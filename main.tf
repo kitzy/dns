@@ -37,7 +37,7 @@ data "aws_route53_records" "existing_records" {
 locals {
   # Flatten the DNS records
   new_records = flatten([
-    for zone_file, zone_data in local.dns_zones : [
+    for zone_data in local.dns_zones : [
       for record in zone_data["records"] : {
         zone_name = zone_data["zone_name"]
         name      = record["name"]
@@ -54,7 +54,7 @@ locals {
   # Only include records that are not already in the existing records
   records_to_create = [
     for r in local.new_records : 
-    r => r["name"] if !(r["name"] in local.existing_record_names)
+    r if !(r.name in local.existing_record_names)
   ]
 }
 
