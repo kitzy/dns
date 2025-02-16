@@ -2,55 +2,37 @@ provider "aws" {
   region = "us-east-1"
 }
 
-# Read all YAML files in the dns_zones/ directory
-data "local_file" "dns_configs" {
-  for_each = fileset("${path.module}/dns_zones", "*.yml")
-  filename = "${path.module}/dns_zones/${each.value}"
+# Get all YAML files from the dns_zones directory
+locals {
+  zone_files = [for f in fileset("${path.module}/dns_zones", "*.yml") : "${path.module}/dns_zones/${f}"]
 }
 
-# Decode YAML content properly
+# Decode each YAML file into a usable format
 locals {
-  zones = { for file, content in data.local_file.dns_configs :
-    yamldecode(content.content).zone_name => yamldecode(content.content)
+  dns_zones = {
+    for file in local.zone_files :
+    basename(file, ".yml") => yamldecode(file(file))
   }
 }
 
-# Lookup existing Route 53 zones
-data "aws_route53_zone" "existing" {
-  for_each = local.zones
-  name     = each.key
-}
-
-# Create Route 53 Hosted Zones only if they don't exist
+# Create Route 53 zones for each zone
 resource "aws_route53_zone" "zones" {
-  for_each = { for name, zone in local.zones : name => zone if data.aws_route53_zone.existing[name].zone_id == "" }
+  for_each = local.dns_zones
 
-  name = each.value.zone_name
-  tags = {
-    "Name" = each.value.zone_name
-  }
+  name = each.value["zone_name"]
 }
 
-# Merge existing and new zones
-locals {
-  final_zones = merge(
-    { for name, zone in local.zones : name => merge(zone, { zone_id = data.aws_route53_zone.existing[name].zone_id }) },
-    { for name, zone in aws_route53_zone.zones : name => merge(zone, { zone_id = zone.zone_id }) }
-  )
-}
-
-# Create DNS Records in the respective Zone
+# Create Route 53 records for each zone
 resource "aws_route53_record" "records" {
-  for_each = merge([for zone_name, zone in local.final_zones : { for rec in zone.records :
-    "${rec.name}.${zone_name}_${rec.type}" => merge(rec, { zone_name = zone_name, zone_id = zone.zone_id }) }]...)
-
-  zone_id = each.value.zone_id
-  name    = "${each.value.name}.${each.value.zone_name}"
-  type    = each.value.type
-  ttl     = each.value.ttl
-  records = each.value.values
-
-  lifecycle {
-    create_before_destroy = true
+  for_each = {
+    for zone_key, zone_data in local.dns_zones :
+    for record in zone_data["records"] :
+    "${zone_key}_${record["name"]}_${record["type"]}" => record
   }
+
+  zone_id = aws_route53_zone.zones[each.value["zone_name"]].id
+  name    = each.value["name"]
+  type    = each.value["type"]
+  ttl     = each.value["ttl"]
+  records = each.value["values"]
 }
