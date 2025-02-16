@@ -60,26 +60,6 @@ resource "null_resource" "import_records" {
   depends_on = [aws_route53_zone.zones]
 
   provisioner "local-exec" {
-    command = <<EOT
-      #!/bin/bash
-      set -e
-
-      for zone_file in $(find "${path.module}/dns_zones" -name "*.yml"); do
-        zone_name=$(basename "$zone_file" .yml)
-        zone_id=$(aws route53 list-hosted-zones --query "HostedZones[?Name=='$zone_name.'].Id" --output text | tr -d '[:space:]')
-
-        if [ -z "$zone_id" ]; then
-          echo "No hosted zone found for $zone_name"
-          continue
-        fi
-
-        jq -r '.records[] | "\(.name) \(.type)"' "$zone_file" | while read -r record_name record_type; do
-          formatted_record_name=$(echo "$record_name" | sed 's/\*/*/g')
-
-          echo "Importing: aws_route53_record.${zone_name}_${record_name}_${record_type}"
-          terraform import "aws_route53_record.${zone_name}_${record_name}_${record_type}" "${zone_id}_${formatted_record_name}_${record_type}"
-        done
-      done
-    EOT
+    command = "bash ${path.module}/import_records.sh"
   }
 }
