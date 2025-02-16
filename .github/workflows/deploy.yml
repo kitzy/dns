@@ -28,14 +28,6 @@ jobs:
       - name: Initialize Terraform
         run: terraform init
 
-      - name: Import Route 53 Zone
-        run: |
-          terraform import 'aws_route53_zone.zones["kitzy.io"]' Z10144243HO0A6H93Y6BY
-
-      - name: Print DNS Zone YAML files
-        run: |
-          cat dns_zones/*.yml
-
       - name: Show Terraform Plan
         run: terraform plan
 
