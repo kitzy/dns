@@ -9,8 +9,14 @@ for FILE in $FILES; do
   # Extract the domain name from the YAML file
   DOMAIN=$(jq -r '.zone_name' "$FILE")
   
-  echo "Processing zone: $DOMAIN"
+  # Debugging line to show what DOMAIN was extracted
+  echo "Extracted zone name: $DOMAIN"
   
+  if [ -z "$DOMAIN" ]; then
+    echo "Error: Domain name is empty. Skipping file $FILE."
+    continue
+  fi
+
   # Get the hosted zone ID for the domain
   ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name "$DOMAIN" --query "HostedZones[0].Id" --output text)
 
