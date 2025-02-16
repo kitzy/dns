@@ -9,24 +9,19 @@ locals {
 
 # Decode each YAML file into a usable format
 locals {
-  dns_zones = {
-    for file in local.zone_files :
-    basename(file, ".yml") => yamldecode(file(file))
-  }
+  # Parse the YAML file (which should be in a format that defines multiple zones)
+  dns_zones = yamldecode(file("zones.yaml"))
 }
 
-# Create Route 53 zones for each zone
 resource "aws_route53_zone" "zones" {
-  for_each = local.dns_zones
+  for_each = { for zone in local.dns_zones : zone["zone_name"] => zone }
 
   name = each.value["zone_name"]
 }
 
-# Create Route 53 records for each zone
-resource "aws_route53_record" "records" {
-  for_each = {
-    for zone_key, zone_data in local.dns_zones :
-    for record in zone_data["records"] :
+resource "aws_route53_record" "dns_records" {
+  for_each = { for zone_key, zone_data in local.dns_zones : 
+    for record in zone_data["records"] : 
     "${zone_key}_${record["name"]}_${record["type"]}" => record
   }
 
