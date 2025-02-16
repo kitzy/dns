@@ -28,6 +28,17 @@ for FILE in $FILES; do
   # Read records from the YAML file and import them one by one
   RECORDS=$(yq e '.records' "$FILE")
 
+  # Debugging: Output the raw extracted records to check if it's valid JSON
+  echo "Raw extracted records from $FILE:"
+  echo "$RECORDS"
+  
+  # Check if the records are valid JSON, if not try to convert it
+  echo "$RECORDS" | jq empty
+  if [ $? -ne 0 ]; then
+    echo "Error: The extracted records are not valid JSON. Skipping file $FILE."
+    continue
+  fi
+
   # Debugging: Output the extracted records
   echo "Extracted records from $FILE:"
   echo "$RECORDS" | jq .
