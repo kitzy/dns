@@ -24,10 +24,19 @@ for file in dns_zones/*.yml; do
     record_name=$(echo $record | jq -r .name)
     record_type=$(echo $record | jq -r .type)
     record_value=$(echo $record | jq -r .value)
-    
+
+    # Validate that we have valid data for the record
+    if [[ -z "$record_name" || -z "$record_type" || -z "$record_value" ]]; then
+      echo "Skipping invalid record: $record_name"
+      continue
+    fi
+
+    # Sanitize record name (replace invalid characters or spaces with underscores)
+    sanitized_record_name=$(echo "$record_name" | sed 's/[^a-zA-Z0-9]/_/g')
+
     # Generate a Terraform configuration block for this record
     cat <<EOF >> route53_import.tf
-resource "aws_route53_record" "${zone_name}_${record_name}_${record_type}" {
+resource "aws_route53_record" "${zone_name}_${sanitized_record_name}_${record_type}" {
   zone_id = "$zone_id"
   name    = "$record_name"
   type    = "$record_type"
@@ -37,7 +46,7 @@ resource "aws_route53_record" "${zone_name}_${record_name}_${record_type}" {
 EOF
 
     # Now import the record using the generated Terraform configuration
-    terraform import aws_route53_record.${zone_name}_${record_name}_${record_type} "${zone_id}_${record_name}"
+    terraform import aws_route53_record.${zone_name}_${sanitized_record_name}_${record_type} "${zone_id}_${record_name}"
     
   done
 done
