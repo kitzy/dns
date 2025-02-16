@@ -21,9 +21,9 @@ resource "aws_route53_zone" "zones" {
 
 resource "aws_route53_record" "dns_records" {
   for_each = {
-    for zone_key, zone_data in local.dns_zones :
-    for record in zone_data["records"] :
-    "${zone_key}_${record["name"]}_${record["type"]}" => record
+    for zone_key, zone_data in local.dns_zones : 
+      for record in zone_data["records"] : 
+        "${zone_key}_${record["name"]}_${record["type"]}" => record
   }
 
   zone_id = aws_route53_zone.dns_zones[each.key].zone_id
