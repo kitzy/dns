@@ -23,11 +23,18 @@ locals {
     ]
   ])
 
-  # Group records by zone name to handle multiple zones with the same name
-  grouped_dns_zones = { for zone in local.dns_zones : zone.zone_name => [
-    for record in local.dns_zones : 
-    record if record.zone_name == zone.zone_name
-  ]}
+  # Group records by zone name
+  grouped_dns_zones = {
+    for zone in local.dns_zones_input : 
+    zone["zone_name"] => [
+      for record in zone["records"] : {
+        name   = record["name"]
+        type   = record["type"]
+        ttl    = record["ttl"]
+        values = record["values"]
+      }
+    ]
+  }
 }
 
 # Dynamically fetch each Route 53 zone based on the zone name from the YAML files
