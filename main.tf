@@ -6,7 +6,7 @@ provider "aws" {
 locals {
   # Original dns_zones from all YAML files in the dns_zones directory
   dns_zones_input = flatten([
-    for zone_file in fileset("dns_zones/", "*.yaml") : 
+    for zone_file in fileset("dns_zones/", "*.yml") : 
       yamldecode(file("dns_zones/${zone_file}"))
   ])
 
