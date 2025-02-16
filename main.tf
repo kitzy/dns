@@ -49,7 +49,7 @@ locals {
 
   # Only include records that do not already exist
   records_to_create = [
-    for r in local.new_records : r if !(r in data.aws_route53_records.existing_records.records)
+    for r in local.new_records : r if !(r in [for record in data.aws_route53_records.existing_records.records : record])
   ]
 }
 
