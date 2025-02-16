@@ -5,9 +5,9 @@ FILES=$(find ./dns_zones -name "*.yml")
 
 for FILE in $FILES; do
   echo "Starting Route 53 record import..."
-  
-  # Extract the domain name from the YAML file
-  DOMAIN=$(jq -r '.zone_name' "$FILE")
+
+  # Extract the domain name from the YAML file using yq
+  DOMAIN=$(yq e '.zone_name' "$FILE")
   
   # Debugging line to show what DOMAIN was extracted
   echo "Extracted zone name: $DOMAIN"
@@ -26,11 +26,11 @@ for FILE in $FILES; do
   fi
 
   # Read records from the YAML file and import them one by one
-  jq -c '.records[]' "$FILE" | while read -r record; do
-    NAME=$(echo "$record" | jq -r '.name')
-    TYPE=$(echo "$record" | jq -r '.type')
-    TTL=$(echo "$record" | jq -r '.ttl')
-    VALUES=$(echo "$record" | jq -r '.values | join(",")')
+  yq e '.records[]' "$FILE" | while read -r record; do
+    NAME=$(echo "$record" | yq e '.name' -)
+    TYPE=$(echo "$record" | yq e '.type' -)
+    TTL=$(echo "$record" | yq e '.ttl' -)
+    VALUES=$(echo "$record" | yq e '.values | join(",")' -)
 
     # Replace "@" with the domain name
     if [[ "$NAME" == "@" ]]; then
