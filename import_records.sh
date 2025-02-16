@@ -25,15 +25,15 @@ for FILE in $FILES; do
     continue
   fi
 
-  # Read records from the YAML file and import them one by one
-  RECORDS=$(yq e '.records' "$FILE")
+  # Read records from the YAML file and convert to JSON format
+  RECORDS_JSON=$(yq e '.records' "$FILE" | yq e -j '.')
 
   # Debugging: Output the raw extracted records to check if it's valid JSON
   echo "Raw extracted records from $FILE:"
-  echo "$RECORDS"
+  echo "$RECORDS_JSON"
   
   # Check if the records are valid JSON, if not try to convert it
-  echo "$RECORDS" | jq empty
+  echo "$RECORDS_JSON" | jq empty
   if [ $? -ne 0 ]; then
     echo "Error: The extracted records are not valid JSON. Skipping file $FILE."
     continue
@@ -41,10 +41,10 @@ for FILE in $FILES; do
 
   # Debugging: Output the extracted records
   echo "Extracted records from $FILE:"
-  echo "$RECORDS" | jq .
+  echo "$RECORDS_JSON" | jq .
 
   # Loop over each record entry
-  echo "$RECORDS" | jq -c '.[]' | while read -r record; do
+  echo "$RECORDS_JSON" | jq -c '.[]' | while read -r record; do
     NAME=$(echo "$record" | jq -r '.name')
     TYPE=$(echo "$record" | jq -r '.type')
     TTL=$(echo "$record" | jq -r '.ttl')
