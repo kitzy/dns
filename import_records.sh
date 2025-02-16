@@ -1,24 +1,19 @@
 #!/bin/bash
-set -e  # Exit on error
+set -e
 
-echo "Starting Route 53 record import..."
+HOSTED_ZONE_ID="YOUR_ZONE_ID"
 
-for zone_file in $(find "$(dirname "$0")/dns_zones" -name "*.yml"); do
-  zone_name=$(basename "$zone_file" .yml)
-  zone_id=$(aws route53 list-hosted-zones --query "HostedZones[?Name=='$zone_name.'].Id" --output text | tr -d '[:space:]')
+echo "Fetching existing Route 53 records..."
+aws route53 list-resource-record-sets --hosted-zone-id "$HOSTED_ZONE_ID" | jq -c '.ResourceRecordSets[]' | while read -r record; do
+  NAME=$(echo "$record" | jq -r '.Name')
+  TYPE=$(echo "$record" | jq -r '.Type')
 
-  if [ -z "$zone_id" ]; then
-    echo "No hosted zone found for $zone_name, skipping..."
-    continue
-  fi
+  # Terraform import format: terraform import aws_route53_record.<RESOURCE_NAME> <ZONE_ID>_<RECORD_NAME>_<RECORD_TYPE>
+  RESOURCE_NAME=$(echo "$NAME" | tr -d '.' | tr -d '*' | tr '[:upper:]' '[:lower:]')_$TYPE
+  IMPORT_CMD="terraform import aws_route53_record.${RESOURCE_NAME} ${HOSTED_ZONE_ID}_${NAME}_${TYPE}"
 
-  jq -r '.records[] | "\(.name) \(.type)"' "$zone_file" | while read -r record_name record_type; do
-    formatted_record_name=$(echo "$record_name" | sed 's/\*/*/g')
-
-    import_command="terraform import aws_route53_record.record_${zone_name}_${record_name}_${record_type} ${zone_id}_${formatted_record_name}_${record_type}"
-    echo "Running: $import_command"
-    eval "$import_command"
-  done
+  echo "Importing: $IMPORT_CMD"
+  $IMPORT_CMD || echo "Failed to import $NAME ($TYPE), skipping..."
 done
 
 echo "Route 53 record import completed."
