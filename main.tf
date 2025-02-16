@@ -23,7 +23,7 @@ data "aws_route53_zone" "existing" {
 
 # Create Route 53 Hosted Zones only if they don't exist
 resource "aws_route53_zone" "zones" {
-  for_each = { for name, zone in local.zones : name => zone if length(data.aws_route53_zone.existing[name].zone_id) == 0 }
+  for_each = { for name, zone in local.zones : name => zone if data.aws_route53_zone.existing[name].zone_id == "" }
 
   name = each.value.zone_name
   tags = {
@@ -39,41 +39,13 @@ locals {
   )
 }
 
-# Fetch existing Route 53 records for each zone
-data "aws_route53_record" "existing_records" {
-  for_each = merge(flatten([
-    for zone_name, zone in local.final_zones : [
-      for rec in zone.records : {
-        key       = "${rec.name}.${zone_name}_${rec.type}"
-        zone_id   = zone.zone_id
-        name      = "${rec.name}.${zone_name}"
-        type      = rec.type
-      }
-    ]
-  ])...)
-
-  zone_id = each.value.zone_id
-  name    = each.value.name
-  type    = each.value.type
-}
-
-# Create Route 53 DNS Records (import existing and create new ones)
+# Create DNS Records in the respective Zone
 resource "aws_route53_record" "records" {
-  for_each = merge(flatten([
-    for zone_name, zone in local.final_zones : [
-      for rec in zone.records : {
-        key       = "${rec.name}.${zone_name}_${rec.type}"
-        zone_id   = zone.zone_id
-        name      = "${rec.name}.${zone_name}"
-        type      = rec.type
-        ttl       = rec.ttl
-        values    = rec.values
-      }
-    ]
-  ])...)
+  for_each = merge([for zone_name, zone in local.final_zones : { for rec in zone.records :
+    "${rec.name}.${zone_name}_${rec.type}" => merge(rec, { zone_name = zone_name, zone_id = zone.zone_id }) }]...)
 
   zone_id = each.value.zone_id
-  name    = each.value.name
+  name    = "${each.value.name}.${each.value.zone_name}"
   type    = each.value.type
   ttl     = each.value.ttl
   records = each.value.values
@@ -82,3 +54,14 @@ resource "aws_route53_record" "records" {
     create_before_destroy = true
   }
 }
+
+# Import existing Route 53 records manually (use this for manual import or automation)
+resource "null_resource" "import_records" {
+  depends_on = [aws_route53_zone.zones]
+
+  provisioner "local-exec" {
+    command = <<EOT
+      # Loop through each zone and import existing records
+      for zone_name in $(ls ${path.module}/dns_zones/*.yml); do
+        zone_name=$(basename "$zone_name" .yml)
+        zone_id=$(aws route53 lis
