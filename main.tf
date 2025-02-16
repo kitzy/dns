@@ -23,18 +23,15 @@ locals {
     ]
   ])
 
-  # Group records by zone_name
+  # Group records by zone_name (without causing duplicate keys)
   grouped_dns_zones = {
-    for zone in local.dns_zones : zone.zone_name => [
-      for record in local.dns_zones : 
-      record if record.zone_name == zone.zone_name
-    ]
+    for zone_name, records in group_by(local.dns_zones, "zone_name") : zone_name => records
   }
 }
 
 # Fetch existing records from Route 53 for each zone
 data "aws_route53_zone" "dns_zone" {
-  for_each = { for zone in local.grouped_dns_zones : zone.key => zone.value }
+  for_each = { for zone_name, records in local.grouped_dns_zones : zone_name => zone_name }
 
   name = each.key
 }
