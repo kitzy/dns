@@ -64,11 +64,11 @@ locals {
         }
     ]
   ])
-  
+
   # Only include records that don't already exist in the zone
   new_records = [
     for r in local.records_to_create : 
-      r if !(r["name"] in [for existing_record in data.aws_route53_records.existing_records[r["zone_name"]].records : existing_record["name"]])
+      r if !(r["name"] in flatten([for existing_record in data.aws_route53_records.existing_records[r["zone_name"]].records : existing_record["name"]]))
   ]
 }
 
