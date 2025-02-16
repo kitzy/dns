@@ -32,6 +32,11 @@ data "aws_route53_zone" "selected" {
   name = each.key
 }
 
+# Output block
+output "dns_zones" {
+  value = local.dns_zones
+}
+
 # Create the Route 53 DNS records based on the YAML data
 resource "aws_route53_record" "dns_records" {
   for_each = {
