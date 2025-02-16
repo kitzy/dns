@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Install yq for parsing YAML
+echo "Installing yq..."
+sudo apt-get install -y jq
+curl -Lo /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.13.1/yq_linux_amd64 && chmod +x /usr/local/bin/yq
+
 # Get the list of YAML files
 FILES=$(find ./dns_zones -name "*.yml")
 
@@ -30,7 +35,16 @@ for FILE in $FILES; do
     NAME=$(echo "$record" | yq e '.name' -)
     TYPE=$(echo "$record" | yq e '.type' -)
     TTL=$(echo "$record" | yq e '.ttl' -)
-    VALUES=$(echo "$record" | yq e '.values | join(",")' -)
+    VALUES=$(echo "$record" | yq e '.values // empty' -)
+
+    # Skip this record if no values are provided
+    if [ -z "$VALUES" ]; then
+      echo "Skipping record $NAME ($TYPE) because it has no values."
+      continue
+    fi
+
+    # Join the values into a comma-separated string
+    VALUES=$(echo "$VALUES" | sed 's/\[//g; s/\]//g; s/ /,/g')
 
     # Replace "@" with the domain name
     if [[ "$NAME" == "@" ]]; then
