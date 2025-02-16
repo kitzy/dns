@@ -29,6 +29,10 @@ data "aws_route53_zone" "dns_zone" {
   name = "<zone-name>"
 }
 
+output "zone_id" {
+  value = data.aws_route53_zone.dns_zone.id
+}
+
 # Generate resources for each DNS record defined
 resource "aws_route53_record" "dns_records" {
   for_each = {
