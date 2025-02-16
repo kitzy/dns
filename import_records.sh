@@ -1,54 +1,40 @@
 #!/bin/bash
 
-echo "Starting Route 53 record import..."
+# Get the list of YAML files
+FILES=$(find ./dns_zones -name "*.yml")
 
-# Loop through each YAML file in the dns_zones directory
-for file in dns_zones/*.yml; do
-  # Extract the domain name from the zone file
-  zone_name=$(yq e '.zone_name' "$file")
-  echo "Processing zone: $zone_name"
-
-  # Get the Route 53 hosted zone ID (assuming this is done outside the loop, adjust as necessary)
-  zone_id=$(aws route53 list-hosted-zones-by-name --dns-name "$zone_name" --query "HostedZones[0].Id" --output text)
+for FILE in $FILES; do
+  echo "Starting Route 53 record import..."
   
-  if [[ "$zone_id" == "None" ]]; then
-    echo "Error: Zone ID not found for $zone_name"
+  # Extract the domain name from the YAML file
+  DOMAIN=$(jq -r '.zone_name' "$FILE")
+  
+  echo "Processing zone: $DOMAIN"
+  
+  # Get the hosted zone ID for the domain
+  ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name "$DOMAIN" --query "HostedZones[0].Id" --output text)
+
+  if [[ "$ZONE_ID" == "None" ]]; then
+    echo "Zone ID for $DOMAIN not found. Skipping..."
     continue
   fi
 
-  # Loop through each record in the YAML file and import it
-  records=$(yq e '.records[]' "$file")
-  
-  for record in $records; do
-    # Extract record details from YAML
-    record_name=$(echo $record | jq -r .name)
-    record_type=$(echo $record | jq -r .type)
-    record_value=$(echo $record | jq -r .value)
+  # Read records from the YAML file and import them one by one
+  jq -c '.records[]' "$FILE" | while read -r record; do
+    NAME=$(echo "$record" | jq -r '.name')
+    TYPE=$(echo "$record" | jq -r '.type')
+    TTL=$(echo "$record" | jq -r '.ttl')
+    VALUES=$(echo "$record" | jq -r '.values | join(",")')
 
-    # Validate that we have valid data for the record
-    if [[ -z "$record_name" || -z "$record_type" || -z "$record_value" ]]; then
-      echo "Skipping invalid record: $record_name"
-      continue
+    # Replace "@" with the domain name
+    if [[ "$NAME" == "@" ]]; then
+      NAME="$DOMAIN"
     fi
 
-    # Sanitize record name (replace invalid characters or spaces with underscores)
-    sanitized_record_name=$(echo "$record_name" | sed 's/[^a-zA-Z0-9]/_/g')
-
-    # Generate a Terraform configuration block for this record
-    cat <<EOF >> route53_import.tf
-resource "aws_route53_record" "${zone_name}_${sanitized_record_name}_${record_type}" {
-  zone_id = "$zone_id"
-  name    = "$record_name"
-  type    = "$record_type"
-  ttl     = 300
-  records = ["$record_value"]
-}
-EOF
-
-    # Now import the record using the generated Terraform configuration
-    terraform import aws_route53_record.${zone_name}_${sanitized_record_name}_${record_type} "${zone_id}_${record_name}"
-    
+    # Import the record
+    echo "Importing: terraform import aws_route53_record.${DOMAIN}_${NAME}_${TYPE} ${ZONE_ID}_$NAME_$TYPE"
+    terraform import aws_route53_record.${DOMAIN}_${NAME}_${TYPE} ${ZONE_ID}_$NAME_$TYPE || echo "Failed to import $NAME ($TYPE), skipping..."
   done
-done
 
-echo "Route 53 record import completed."
+  echo "Route 53 record import completed."
+done
