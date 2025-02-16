@@ -37,10 +37,19 @@ data "aws_route53_zone" "dns_zone" {
   name = each.key
 }
 
+# Fetch the existing records for each zone
+data "aws_route53_records" "existing_records" {
+  for_each = data.aws_route53_zone.dns_zone
+
+  zone_id = each.value.id
+}
+
 # Generate resources for each DNS record defined, based on zone and record name
 resource "aws_route53_record" "dns_records" {
   for_each = {
-    for record in local.dns_zones : "${record.zone_name}_${record.name}_${record.type}" => record
+    for record in local.dns_zones : 
+    "${record.zone_name}_${record.name}_${record.type}" => record if 
+    !contains([for existing_record in data.aws_route53_records.existing_records[record.zone_name].records : existing_record.name], record.name)
   }
 
   zone_id = data.aws_route53_zone.dns_zone[each.value.zone_name].id
