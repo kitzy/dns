@@ -1,0 +1,90 @@
+zone_name: "kitzy.io"
+records:
+  - name: "@"
+    ttl: 300
+    type: MX
+    values:
+      - "1 aspmx.l.google.com."
+      - "5 alt1.aspmx.l.google.com."
+      - "5 alt2.aspmx.l.google.com."
+      - "10 aspmx2.googlemail.com."
+      - "10 aspmx3.googlemail.com."
+  - name: "@"
+    ttl: 172800
+    type: NS
+    values:
+      - "ns-1583.awsdns-05.co.uk."
+      - "ns-1232.awsdns-26.org."
+      - "ns-938.awsdns-53.net."
+      - "ns-476.awsdns-59.com."
+  - name: "@"
+    ttl: 900
+    type: SOA
+    values:
+      - "ns-1583.awsdns-05.co.uk. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400"
+  - name: "@"
+    ttl: 300
+    type: TXT
+    values:
+      - "\"google-site-verification=oN8rxZJ-seUiYtYwbAfVoqBsg9t9BDe7mzQWzwABZTA\""
+      - "\"keybase-site-verification=_t6kvEWhlm0JnE5I6-8hVCxF8NXp2g9sYCwNrpNcpUI\""
+  - name: cctv
+    ttl: 300
+    type: CNAME
+    values:
+      - "nas.kitzy.io."
+  - name: download
+    ttl: 300
+    type: CNAME
+    values:
+      - "nas.kitzy.io."
+  - name: drive
+    ttl: 300
+    type: CNAME
+    values:
+      - "nas.kitzy.io."
+  - name: dsm
+    ttl: 300
+    type: CNAME
+    values:
+      - "home.kitzy.io."
+  - name: files
+    ttl: 300
+    type: CNAME
+    values:
+      - "nas.kitzy.io."
+  - name: home
+    ttl: 300
+    type: A
+    values:
+      - "100.34.107.82"
+  - name: lakehouse
+    ttl: 60
+    type: A
+    values:
+      - "70.15.246.42"
+  - name: nas
+    ttl: 300
+    type: A
+    values:
+      - "100.34.107.83"
+  - name: plex
+    ttl: 300
+    type: CNAME
+    values:
+      - "nas.kitzy.io."
+  - name: unifi
+    ttl: 300
+    type: A
+    values:
+      - "35.211.186.33"
+  - name: vault
+    ttl: 300
+    type: CNAME
+    values:
+      - "lakehouse.kitzy.io."
+  - name: vpn
+    ttl: 300
+    type: CNAME
+    values:
+      - "home.kitzy.io."
