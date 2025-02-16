@@ -8,19 +8,19 @@ data "local_file" "dns_configs" {
   filename = "${path.module}/dns_zones/${each.value}"
 }
 
-# Decode YAML content
+# Decode YAML content properly
 locals {
-  zones = { for file, content in data.local_file.dns_configs : 
-    content.content.zone_name => yamldecode(content.content) 
+  zones = { for file, content in data.local_file.dns_configs :
+    yamldecode(content.content).zone_name => yamldecode(content.content)
   }
 }
 
 # Create Route 53 Hosted Zones if they don't exist
 resource "aws_route53_zone" "zones" {
   for_each = local.zones
-  name     = each.key
+  name     = each.value.zone_name
   tags = {
-    "Name" = each.key
+    "Name" = each.value.zone_name
   }
 }
 
@@ -29,7 +29,7 @@ resource "aws_route53_record" "records" {
   for_each = merge([for zone_name, zone in local.zones : { for rec in zone.records :
     "${rec.name}.${zone_name}_${rec.type}" => merge(rec, { zone_name = zone_name }) }]...)
 
-  zone_id = aws_route53_zone.zones[each.value.zone_name].zone_id  # This now matches
+  zone_id = aws_route53_zone.zones[each.value.zone_name].zone_id
   name    = "${each.value.name}.${each.value.zone_name}"
   type    = each.value.type
   ttl     = each.value.ttl
