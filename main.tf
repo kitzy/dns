@@ -23,12 +23,10 @@ locals {
     ]
   ])
 
-  # Group the DNS records by zone_name
+  # Group records by zone_name
   grouped_dns_zones = {
-    for record in local.dns_zones : 
-    record.zone_name => (
-      lookup(local.grouped_dns_zones, record.zone_name, []) + [record]
-    )
+    for zone_name in distinct([for record in local.dns_zones : record.zone_name]) : 
+    zone_name => [for record in local.dns_zones : record if record.zone_name == zone_name]
   }
 }
 
