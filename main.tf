@@ -23,13 +23,17 @@ locals {
     ]
   ])
 
-  # Initialize a map to store records grouped by zone_name
-  grouped_dns_zones = {
-    for record in local.dns_zones : 
+  # Initialize an empty map and then group records by zone_name
+  initial_group = {}
+  grouped_dns_zones = [
+    for record in local.dns_zones :
+    # Group records by zone_name
+    merge(initial_group, { 
       record.zone_name => (
-        lookup(local.grouped_dns_zones, record.zone_name, []) + [record]
+        lookup(initial_group, record.zone_name, []) + [record]
       )
-  }
+    })
+  ]
 }
 
 # Fetch existing records from Route 53 for each zone
