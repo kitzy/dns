@@ -4,7 +4,7 @@ provider "aws" {
 
 # Read all YAML files in the dns_zones/ directory
 data "local_file" "dns_configs" {
-  for_each = fileset("${path.module}/dns_zones", "*.yaml")
+  for_each = fileset("${path.module}/dns_zones", "*.yml")
   filename = "${path.module}/dns_zones/${each.value}"
 }
 
