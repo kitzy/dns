@@ -29,37 +29,11 @@ data "aws_route53_zone" "dns_zone" {
   name = "<zone-name>"
 }
 
-data "aws_route53_records" "existing_records" {
-  zone_id = data.aws_route53_zone.dns_zone.id
-}
-
-# Update your dns_zones variable to include only records that need to be created
-locals {
-  # Flatten the DNS records
-  new_records = flatten([
-    for zone_data in local.dns_zones : [
-      for record in zone_data["records"] : {
-        zone_name = zone_data["zone_name"]
-        name      = record["name"]
-        type      = record["type"]
-        ttl       = record["ttl"]
-        values    = record["values"]
-      }
-    ]
-  ])
-
-  # Extract the existing records and compare them
-  existing_record_names = flatten([for record in data.aws_route53_records.existing_records.records : record.name])
-
-  # Only include records that are not already in the existing records
-  records_to_create = [
-    for r in local.new_records : 
-    r if !(r["name"] in local.existing_record_names)
-  ]
-}
-
+# Generate resources for each DNS record defined
 resource "aws_route53_record" "dns_records" {
-  for_each = { for record in local.records_to_create : "${record.zone_name}_${record.name}_${record.type}" => record }
+  for_each = {
+    for record in local.dns_zones : "${record.zone_name}_${record.name}_${record.type}" => record
+  }
 
   zone_id = data.aws_route53_zone.dns_zone.id
   name    = each.value.name
