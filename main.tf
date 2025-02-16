@@ -61,7 +61,24 @@ resource "null_resource" "import_records" {
 
   provisioner "local-exec" {
     command = <<EOT
-      # Loop through each zone and import existing records
-      for zone_name in $(ls ${path.module}/dns_zones/*.yml); do
-        zone_name=$(basename "$zone_name" .yml)
-        zone_id=$(aws route53 lis
+      # Loop through each zone YAML file and import existing records
+      for zone_file in $(find "${path.module}/dns_zones" -name "*.yml"); do
+        zone_name=$(basename "$zone_file" .yml)
+        zone_id=$(aws route53 list-hosted-zones --query "HostedZones[?Name=='$zone_name.'].Id" --output text)
+
+        if [ -z "$zone_id" ]; then
+          echo "No zone found for $zone_name"
+          continue
+        fi
+
+        # Extract record details from YAML and generate import commands
+        jq -r '.records[] | "\(.name) \(.type)"' "$zone_file" | while read -r record_name record_type; do
+          import_command="terraform import aws_route53_record.records[\"${record_name}.${zone_name}_${record_type}\"] ${zone_id}_${record_name}_${record_type}"
+          echo "Running: $import_command"
+          $import_command
+        done
+      done
+    EOT
+  }
+}
+
