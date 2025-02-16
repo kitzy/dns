@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "dns_zones/*.yaml"
+      - "dns_zones/*.yml"
   workflow_dispatch:
 
 jobs:
