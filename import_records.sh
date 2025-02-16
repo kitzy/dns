@@ -26,11 +26,14 @@ for FILE in $FILES; do
   fi
 
   # Read records from the YAML file and import them one by one
-  yq e '.records[]' "$FILE" | while read -r record; do
-    NAME=$(echo "$record" | yq e '.name' -)
-    TYPE=$(echo "$record" | yq e '.type' -)
-    TTL=$(echo "$record" | yq e '.ttl' -)
-    VALUES=$(echo "$record" | yq e '.values // empty' -)
+  RECORDS=$(yq e '.records' "$FILE")
+
+  # Loop over each record entry
+  echo "$RECORDS" | jq -c '.[]' | while read -r record; do
+    NAME=$(echo "$record" | jq -r '.name')
+    TYPE=$(echo "$record" | jq -r '.type')
+    TTL=$(echo "$record" | jq -r '.ttl')
+    VALUES=$(echo "$record" | jq -r '.values // empty')
 
     # Skip this record if no values are provided
     if [ -z "$VALUES" ]; then
@@ -38,7 +41,7 @@ for FILE in $FILES; do
       continue
     fi
 
-    # Join the values into a comma-separated string
+    # Join the values into a comma-separated string if necessary
     VALUES=$(echo "$VALUES" | sed 's/\[//g; s/\]//g; s/ /,/g')
 
     # Replace "@" with the domain name
@@ -46,8 +49,10 @@ for FILE in $FILES; do
       NAME="$DOMAIN"
     fi
 
-    # Import the record
+    # Debugging to show what is being imported
     echo "Importing: terraform import aws_route53_record.${DOMAIN}_${NAME}_${TYPE} ${ZONE_ID}_$NAME_$TYPE"
+
+    # Import the record
     terraform import aws_route53_record.${DOMAIN}_${NAME}_${TYPE} ${ZONE_ID}_$NAME_$TYPE || echo "Failed to import $NAME ($TYPE), skipping..."
   done
 
