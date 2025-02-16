@@ -17,7 +17,6 @@ locals {
 resource "aws_route53_zone" "zones" {
   for_each = local.zones
   name     = each.value.zone_name
-  private_zone = false
   tags = {
     "Name" = each.value.zone_name
   }
