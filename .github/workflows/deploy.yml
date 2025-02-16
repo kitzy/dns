@@ -25,6 +25,11 @@ jobs:
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v1
 
+      - name: Import Route 53 Records
+        run: |
+          chmod +x import_records.sh
+          ./import_records.sh || echo "Import script failed, but continuing..."
+      
       - name: Initialize Terraform
         run: terraform init
 

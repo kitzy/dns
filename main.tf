@@ -54,12 +54,3 @@ resource "aws_route53_record" "records" {
     create_before_destroy = true
   }
 }
-
-# Import existing Route 53 records manually (use this for manual import or automation)
-resource "null_resource" "import_records" {
-  depends_on = [aws_route53_zone.zones]
-
-  provisioner "local-exec" {
-    command = "bash ${path.module}/import_records.sh"
-  }
-}
