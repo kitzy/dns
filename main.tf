@@ -22,11 +22,19 @@ locals {
       }
     ]
   ])
+
+  # Group records by zone_name
+  grouped_dns_zones = {
+    for zone in local.dns_zones : zone.zone_name => [
+      for record in local.dns_zones : 
+      record if record.zone_name == zone.zone_name
+    ]
+  }
 }
 
-# Fetch existing records from Route 53
+# Fetch existing records from Route 53 for each zone
 data "aws_route53_zone" "dns_zone" {
-  for_each = { for zone in local.dns_zones : zone.zone_name => zone }
+  for_each = { for zone in local.grouped_dns_zones : zone.key => zone.value }
 
   name = each.key
 }
