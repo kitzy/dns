@@ -35,6 +35,7 @@ data "aws_route53_records" "existing_records" {
 
 # Update your dns_zones variable to include only records that need to be created
 locals {
+  # Flatten the DNS records
   new_records = flatten([
     for zone_file, zone_data in local.dns_zones : [
       for record in zone_data["records"] : {
@@ -47,9 +48,12 @@ locals {
     ]
   ])
 
-  # Only include records that do not already exist
+  # Extract the existing records and compare them
+  existing_record_names = flatten([for record in data.aws_route53_records.existing_records.records : record.name])
+
+  # Only include records that are not already in the existing records
   records_to_create = [
-    for r in local.new_records : r if !(r in flatten([for record in data.aws_route53_records.existing_records.records : record]))
+    for r in local.new_records : r if !(r.name in local.existing_record_names)
   ]
 }
 
