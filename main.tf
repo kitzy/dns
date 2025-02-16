@@ -22,18 +22,24 @@ resource "aws_route53_zone" "dns_zones" {
 }
 
 # Create Route 53 Records for each zone
+locals {
+  dns_zones = flatten([
+    for zone_file, zone_data in local.dns_zones : [
+      for record in zone_data["records"] : {
+        zone_name = zone_data["zone_name"]
+        name      = record["name"]
+        type      = record["type"]
+        ttl       = record["ttl"]
+        values    = record["values"]
+      }
+    ]
+  ])
+}
+
 resource "aws_route53_record" "dns_records" {
   for_each = {
-    for zone_file, zone_data in local.dns_zones :
-    for record in zone_data["records"] :
-    # Flattening and creating a unique key for each record
-    "${zone_data["zone_name"]}_${record["name"]}_${record["type"]}" => {
-      zone_name = zone_data["zone_name"]
-      name      = record["name"]
-      type      = record["type"]
-      ttl       = record["ttl"]
-      values    = record["values"]
-    }
+    for record in local.dns_zones :
+    "${record["zone_name"]}_${record["name"]}_${record["type"]}" => record
   }
 
   zone_id = data.aws_route53_zone.selected[each.value.zone_name].id
@@ -42,5 +48,6 @@ resource "aws_route53_record" "dns_records" {
   ttl     = each.value.ttl
   records = each.value.values
 }
+
 
 
