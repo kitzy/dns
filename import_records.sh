@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# Install yq for parsing YAML
-echo "Installing yq..."
-sudo apt-get install -y jq
-curl -Lo /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.13.1/yq_linux_amd64 && chmod +x /usr/local/bin/yq
-
 # Get the list of YAML files
 FILES=$(find ./dns_zones -name "*.yml")
 
