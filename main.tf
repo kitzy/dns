@@ -24,22 +24,24 @@ locals {
   ])
 }
 
-# Fetch existing records from Route 53
+# Dynamically fetch each Route 53 zone based on the zone name from the YAML files
 data "aws_route53_zone" "dns_zone" {
-  name = "<zone-name>"
+  for_each = { for zone in local.dns_zones : zone.zone_name => zone }
+
+  name = each.key
 }
 
-output "zone_id" {
-  value = data.aws_route53_zone.dns_zone.id
+output "zone_ids" {
+  value = { for k, v in data.aws_route53_zone.dns_zone : k => v.id }
 }
 
-# Generate resources for each DNS record defined
+# Generate resources for each DNS record defined, based on zone and record name
 resource "aws_route53_record" "dns_records" {
   for_each = {
     for record in local.dns_zones : "${record.zone_name}_${record.name}_${record.type}" => record
   }
 
-  zone_id = data.aws_route53_zone.dns_zone.id
+  zone_id = data.aws_route53_zone.dns_zone[each.value.zone_name].id
   name    = each.value.name
   type    = each.value.type
   ttl     = each.value.ttl
