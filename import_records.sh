@@ -28,12 +28,19 @@ for FILE in $FILES; do
   # Read records from the YAML file and import them one by one
   RECORDS=$(yq e '.records' "$FILE")
 
+  # Debugging: Output the extracted records
+  echo "Extracted records from $FILE:"
+  echo "$RECORDS" | jq .
+
   # Loop over each record entry
   echo "$RECORDS" | jq -c '.[]' | while read -r record; do
     NAME=$(echo "$record" | jq -r '.name')
     TYPE=$(echo "$record" | jq -r '.type')
     TTL=$(echo "$record" | jq -r '.ttl')
     VALUES=$(echo "$record" | jq -r '.values // empty')
+
+    # Debugging: Output the individual record data
+    echo "Processing record: Name=$NAME, Type=$TYPE, TTL=$TTL, Values=$VALUES"
 
     # Skip this record if no values are provided
     if [ -z "$VALUES" ]; then
