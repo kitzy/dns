@@ -30,7 +30,10 @@ jobs:
   
       - name: Combine individual YAML files into master YAML
         run: |
-          cat ./dns_zones/*.yml > ./combined_zones.yml
+          for file in ./dns_zones/*.yml; do
+            cat "$file" >> ./combined_zones.yml
+            echo "" >> ./combined_zones.yml  # Ensure a newline is added after each file
+          done
           cat combined_zones.yml
 
       - name: Set up Terraform
