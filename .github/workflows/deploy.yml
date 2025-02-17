@@ -31,6 +31,7 @@ jobs:
       - name: Combine individual YAML files into master YAML
         run: |
           cat ./dns_zones/*.yml > ./combined_zones.yml
+          cat combined_zones.yml
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
