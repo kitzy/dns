@@ -28,13 +28,23 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y python3-yaml
   
+      - name: Install yq
+        run: |
+            wget https://github.com/mikefarah/yq/releases/download/v4.15.1/yq_linux_amd64 -O /usr/bin/yq
+            chmod +x /usr/bin/yq
+
       - name: Combine individual YAML files into master YAML
         run: |
-          for file in ./dns_zones/*.yml; do
-            cat "$file" >> ./combined_zones.yml
-            echo "" >> ./combined_zones.yml  # Ensure a newline is added after each file
-          done
-          cat combined_zones.yml
+            # Initialize an empty combined file
+            echo "[]" > ./combined_zones.yml
+            # Merge all YAML files into one, ensuring correct format
+            for file in ./dns_zones/*.yml; do
+              yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' ./combined_zones.yml "$file" > temp_combined.yml && mv temp_combined.yml ./combined_zones.yml
+            done
+
+      - name: Debug combined zones
+        run: |
+            cat ./combined_zones.yml
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
