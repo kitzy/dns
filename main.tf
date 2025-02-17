@@ -11,6 +11,10 @@ provider "aws" {
   region = "us-east-1"
 }
 
+locals {
+  dns_zones = yamldecode(file("${path.module}/combined_zones.yml"))
+}
+
 # Load YAML file containing all DNS zones and records
 locals {
   zone_ids = jsondecode(file("${path.module}/zone_ids.json"))
@@ -34,7 +38,7 @@ locals {
 # Fetch Route 53 Hosted Zones dynamically
 data "aws_route53_zone" "selected" {
   for_each = { for zone in local.dns_zones : zone.zone_name => zone }
-  name     = each.key
+  name     = each.value.zone_name
 }
 
 # Fetch existing records in each zone
