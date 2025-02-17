@@ -1,25 +1,28 @@
-# Provider Configuration
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
 provider "aws" {
   region = "us-east-1"
 }
 
-# Load DNS zones from the combined YAML file
+# Load YAML file containing all DNS zones and records
 locals {
   dns_zones = yamldecode(file("${path.module}/combined_zones.yml"))
 }
 
-# Data source to get existing DNS records in Route 53
-data "aws_route53_zone" "dns_zone" {
+# Fetch Route 53 Hosted Zones dynamically
+data "aws_route53_zone" "selected" {
   for_each = { for zone in local.dns_zones : zone.zone_name => zone }
   name     = each.key
 }
 
-data "aws_route53_records" "existing_records" {
-  for_each = data.aws_route53_zone.dns_zone
-  zone_id  = each.value.id
-}
-
-# Manage DNS records
+# Create Route 53 records for each zone and record
 resource "aws_route53_record" "dns_records" {
   for_each = {
     for r in flatten([
