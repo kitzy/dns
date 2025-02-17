@@ -49,13 +49,20 @@ jobs:
 
       - name: Fetch Hosted Zone IDs
         run: |
-          echo "ZONE_IDS={}" > zone_ids.json  # Initialize an empty JSON object
+          echo '{}' > zone_ids.json  # Properly initialize an empty JSON object
+
           for file in ./dns_zones/*.yml; do
             zone_name=$(yq e '.zone_name' "$file")
             zone_id=$(aws route53 list-hosted-zones-by-name --dns-name "$zone_name" --query "HostedZones[0].Id" --output text | sed 's|/hostedzone/||')
+
             echo "Fetching hosted zone ID for $zone_name: $zone_id"
-            yq e ". + {\"$zone_name\": \"$zone_id\"}" -i zone_ids.json
+
+            # Use jq instead of yq to ensure correct JSON formatting
+            jq --arg key "$zone_name" --arg value "$zone_id" '. + {($key): $value}' zone_ids.json > tmp_zone_ids.json && mv tmp_zone_ids.json zone_ids.json
           done
+
+          cat zone_ids.json  # Output the final JSON for debugging
+
 
       - name: Fetch Existing DNS Records
         run: |
