@@ -22,7 +22,13 @@ data "aws_route53_zone" "selected" {
   name     = each.key
 }
 
-# Create Route 53 records for each zone and record
+# Fetch existing records in each zone
+data "aws_route53_records" "existing" {
+  for_each = data.aws_route53_zone.selected
+  zone_id  = each.value.zone_id
+}
+
+# Create Route 53 records, skipping existing ones
 resource "aws_route53_record" "dns_records" {
   for_each = {
     for r in flatten([
@@ -37,6 +43,7 @@ resource "aws_route53_record" "dns_records" {
         }
       ]
     ]) : r.key => r
+    if !contains([for existing in data.aws_route53_records.existing[r.zone_name].records : existing.name], r.name)
   }
 
   zone_id = data.aws_route53_zone.selected[each.value.zone_name].zone_id
