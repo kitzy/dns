@@ -30,14 +30,7 @@ jobs:
   
       - name: Combine individual YAML files into master YAML
         run: |
-            mkdir -p temp_dns_zones
-            cp ./dns_zones/* temp_dns_zones/  # Assuming the individual YAML files are in the 'dns_zones' folder
-            
-            # Combine the individual YAML files into a master YAML file
-            echo "zones:" > combined_dns_zones.yml
-            for file in temp_dns_zones/*.yml; do
-              cat $file | tail -n +2 >> combined_dns_zones.yml  # Skip the "zones:" header in each file and append
-            done
+          cat ./dns_zones/*.yml > ./combined_zones.yml
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
