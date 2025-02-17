@@ -47,6 +47,23 @@ jobs:
         run: |
             cat ./combined_zones.yml
 
+      - name: Fetch Hosted Zone IDs
+        run: |
+          echo "ZONE_IDS={}" > zone_ids.json  # Initialize an empty JSON object
+          for file in ./dns_zones/*.yml; do
+            zone_name=$(yq e '.zone_name' "$file")
+            zone_id=$(aws route53 list-hosted-zones-by-name --dns-name "$zone_name" --query "HostedZones[0].Id" --output text | sed 's|/hostedzone/||')
+            echo "Fetching hosted zone ID for $zone_name: $zone_id"
+            yq e ". + {\"$zone_name\": \"$zone_id\"}" -i zone_ids.json
+          done
+
+      - name: Fetch Existing DNS Records
+        run: |
+            jq -r 'to_entries | .[] | "\(.key) \(.value)"' zone_ids.json | while read zone_name zone_id; do
+              echo "Fetching existing records for $zone_name ($zone_id)"
+              aws route53 list-resource-record-sets --hosted-zone-id "$zone_id" > "existing_records_${zone_name}.json"
+            done
+  
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
 

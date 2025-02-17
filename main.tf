@@ -13,8 +13,23 @@ provider "aws" {
 
 # Load YAML file containing all DNS zones and records
 locals {
-  dns_zones = yamldecode(file("${path.module}/combined_zones.yml"))
+  zone_ids = jsondecode(file("${path.module}/zone_ids.json"))
 }
+
+locals {
+  existing_records = {
+    for zone_name, zone_id in local.zone_ids :
+    zone_name => jsondecode(file("${path.module}/existing_records_${zone_name}.json"))
+  }
+}
+
+locals {
+  existing_record_names = {
+    for zone_name, records in local.existing_records :
+    zone_name => [for r in records.ResourceRecordSets : r.Name]
+  }
+}
+
 
 # Fetch Route 53 Hosted Zones dynamically
 data "aws_route53_zone" "selected" {
@@ -43,10 +58,10 @@ resource "aws_route53_record" "dns_records" {
         }
       ]
     ]) : r.key => r
-    if !contains([for existing in data.aws_route53_records.existing[r.zone_name].records : existing.name], r.name)
+    if !contains(local.existing_record_names[r.zone_name], r.name)
   }
 
-  zone_id = data.aws_route53_zone.selected[each.value.zone_name].zone_id
+  zone_id = local.zone_ids[each.value.zone_name]
   name    = each.value.name
   type    = each.value.type
   ttl     = each.value.ttl
