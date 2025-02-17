@@ -34,9 +34,9 @@ jobs:
             cp ./dns_zones/* temp_dns_zones/  # Assuming the individual YAML files are in the 'dns_zones' folder
             
             # Combine the individual YAML files into a master YAML file
-            echo "zones:" > combined_dns_zones.yaml
-            for file in temp_dns_zones/*.yaml; do
-              cat $file | tail -n +2 >> combined_dns_zones.yaml  # Skip the "zones:" header in each file and append
+            echo "zones:" > combined_dns_zones.yml
+            for file in temp_dns_zones/*.yml; do
+              cat $file | tail -n +2 >> combined_dns_zones.yml  # Skip the "zones:" header in each file and append
             done
 
       - name: Set up Terraform
