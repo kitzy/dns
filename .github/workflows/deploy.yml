@@ -23,6 +23,22 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
+      - name: Install dependencies
+        run: |
+            sudo apt-get update
+            sudo apt-get install -y python3-yaml
+  
+      - name: Combine individual YAML files into master YAML
+        run: |
+            mkdir -p temp_dns_zones
+            cp ./dns_zones/* temp_dns_zones/  # Assuming the individual YAML files are in the 'dns_zones' folder
+            
+            # Combine the individual YAML files into a master YAML file
+            echo "zones:" > combined_dns_zones.yaml
+            for file in temp_dns_zones/*.yaml; do
+              cat $file | tail -n +2 >> combined_dns_zones.yaml  # Skip the "zones:" header in each file and append
+            done
+
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
 
