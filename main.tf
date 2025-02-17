@@ -21,27 +21,24 @@ data "aws_route53_records" "existing_records" {
 
 # Manage DNS records
 resource "aws_route53_record" "dns_records" {
-  for_each = flatten([
-    for zone in local.dns_zones : [
-      for record in zone.records : {
-        key       = "${zone.zone_name}_${record.name}_${record.type}"
-        zone_name = zone.zone_name
-        name      = record.name
-        type      = record.type
-        ttl       = record.ttl
-        values    = record.values
-      }
-    ]
-  ])
+  for_each = {
+    for r in flatten([
+      for zone in local.dns_zones : [
+        for record in zone.records : {
+          key       = "${zone.zone_name}_${record.name}_${record.type}"
+          zone_name = zone.zone_name
+          name      = record.name
+          type      = record.type
+          ttl       = record.ttl
+          values    = record.values
+        }
+      ]
+    ]) : r.key => r
+  }
 
-  zone_id = data.aws_route53_zone.dns_zone[each.value.zone_name].id
+  zone_id = data.aws_route53_zone.selected[each.value.zone_name].zone_id
   name    = each.value.name
   type    = each.value.type
   ttl     = each.value.ttl
   records = each.value.values
-}
-
-# Outputs for validation
-output "dns_zones" {
-  value = local.dns_zones
 }
