@@ -1,73 +1,55 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = "us-east-1"
-}
-
+# Fetch DNS zone details from combined YAML file
 locals {
   dns_zones = yamldecode(file("${path.module}/combined_zones.yml"))
 }
 
-# Load YAML file containing all DNS zones and records
-locals {
-  zone_ids = jsondecode(file("${path.module}/zone_ids.json"))
-}
-
-locals {
-  existing_records = {
-    for zone_name, zone_id in local.zone_ids :
-    zone_name => jsondecode(file("${path.module}/existing_records_${zone_name}.json"))
-  }
-}
-
-locals {
-  existing_record_names = {
-    for zone_name, records in local.existing_records :
-    zone_name => [for r in records.ResourceRecordSets : r.Name]
-  }
-}
-
-
-# Fetch Route 53 Hosted Zones dynamically
+# Fetch existing Route 53 Zones
 data "aws_route53_zone" "selected" {
   for_each = { for zone in local.dns_zones : zone.zone_name => zone }
   name     = each.value.zone_name
 }
 
-# Fetch existing records in each zone
+# Fetch existing Route 53 records
 data "aws_route53_records" "existing" {
   for_each = data.aws_route53_zone.selected
   zone_id  = each.value.zone_id
 }
 
-# Create Route 53 records, skipping existing ones
+# Create DNS records if they don't already exist
 resource "aws_route53_record" "dns_records" {
-  for_each = {
-    for r in flatten([
-      for zone in local.dns_zones : [
-        for record in zone.records : {
-          key       = "${zone.zone_name}_${record.name}_${record.type}"
-          zone_name = zone.zone_name
-          name      = record.name
-          type      = record.type
-          ttl       = record.ttl
-          values    = record.values
-        }
-      ]
-    ]) : r.key => r
-    if !contains(local.existing_record_names[r.zone_name], r.name)
+  for_each = { for zone in local.dns_zones : zone.zone_name => zone }
+
+  zone_id = data.aws_route53_zone.selected[each.key].zone_id
+  name    = each.value.records[0].name
+  type    = each.value.records[0].type
+  ttl     = each.value.records[0].ttl
+  records = each.value.records[0].values
+
+  lifecycle {
+    ignore_changes = [ttl, records]
   }
 
-  zone_id = local.zone_ids[each.value.zone_name]
-  name    = each.value.name
-  type    = each.value.type
-  ttl     = each.value.ttl
-  records = each.value.values
+  count = length([
+    for r in each.value.records :
+    r if !contains([
+      for existing in data.aws_route53_records.existing[each.key].records : existing.name
+    ], r.name)
+  ])
+}
+
+# Fetch the hosted zone ID of each zone from DNS zone files and write to zone_ids.json
+run "Fetching hosted zone IDs" {
+  echo "ZONE_IDS={}" > zone_ids.json  # Initialize an empty JSON object
+  for file in ./dns_zones/*.yml; do
+    zone_name=$(yq e '.zone_name' "$file")
+    zone_id=$(aws route53 list-hosted-zones-by-name --dns-name "$zone_name" --query "HostedZones[0].Id" --output text | sed 's|/hostedzone/||')
+    echo "Fetching hosted zone ID for $zone_name: $zone_id"
+    yq e ". + {\"$zone_name\": \"$zone_id\"}" -i zone_ids.json
+  done
+}
+
+# Fetch existing records from the Route53 hosted zones
+data "aws_route53_records" "existing" {
+  for_each = data.aws_route53_zone.selected
+  zone_id  = each.value.zone_id
 }
