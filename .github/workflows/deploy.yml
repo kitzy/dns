@@ -38,9 +38,9 @@ jobs:
         run: |
             # Initialize an empty combined file
             echo "[]" > ./combined_zones.yml
-            # Merge all YAML files into one, ensuring correct format
+            # Merge all YAML files into one, ensuring correct format (merging lists)
             for file in ./dns_zones/*.yml; do
-              yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' ./combined_zones.yml "$file" > temp_combined.yml && mv temp_combined.yml ./combined_zones.yml
+              yq eval-all 'select(fileIndex == 0) + select(fileIndex == 1)' ./combined_zones.yml "$file" > temp_combined.yml && mv temp_combined.yml ./combined_zones.yml
             done
 
       - name: Debug combined zones
