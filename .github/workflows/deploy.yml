@@ -30,8 +30,9 @@ jobs:
   
       - name: Install yq
         run: |
-            wget https://github.com/mikefarah/yq/releases/download/v4.15.1/yq_linux_amd64 -O /usr/bin/yq
-            chmod +x /usr/bin/yq
+            wget https://github.com/mikefarah/yq/releases/download/v4.15.1/yq_linux_amd64 -O /tmp/yq
+            chmod +x /tmp/yq
+            mv /tmp/yq /usr/local/bin/yq
 
       - name: Combine individual YAML files into master YAML
         run: |
