@@ -14,12 +14,20 @@ jobs:
       TF_VAR_AWS_REGION: ${{ secrets.AWS_REGION }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install import dependencies
+        run: pip install boto3 pyyaml
       - uses: hashicorp/setup-terraform@v2
         with:
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
       - name: Terraform init
         working-directory: terraform
         run: terraform init
+      - name: Import Route53 state
+        working-directory: terraform
+        run: ../scripts/import_route53.py
       - name: Terraform apply
         working-directory: terraform
         run: terraform apply -auto-approve

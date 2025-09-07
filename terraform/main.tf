@@ -90,5 +90,5 @@ resource "aws_route53_record" "this" {
     }
   }
 
-  multivalue_answer_routing_policy = each.value.routing_policy != null && try(each.value.routing_policy.type, "") == "multivalue"
+  multivalue_answer_routing_policy = each.value.routing_policy != null && try(each.value.routing_policy.type, "") == "multivalue" ? true : null
 }
