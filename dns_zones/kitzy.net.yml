@@ -21,3 +21,8 @@ records:
     values:
       - "keybase-site-verification=t-u9Qz4iU7oOd4DMKH0FHW69b_Xo-oCXh7dTaPxmmb0"
       - "google-site-verification=RCPsMhka0hUhhhjWGMPboyjoMoFiNMMlyntpCQsjlvg"
+  - name: "test.kitzy.net"
+    ttl: 300
+    type: TXT
+    values:
+      - "It works!"
