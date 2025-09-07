@@ -1,6 +1,6 @@
 zone_name: "kitzy.io"
 records:
-  - name: "@"
+  - name: "kitzy.io"
     ttl: 300
     type: MX
     values:
@@ -9,7 +9,7 @@ records:
       - "5 alt2.aspmx.l.google.com."
       - "10 aspmx2.googlemail.com."
       - "10 aspmx3.googlemail.com."
-  - name: "@"
+  - name: "kitzy.io"
     ttl: 300
     type: TXT
     values:

@@ -1,9 +1,9 @@
 zone_name: "kitzy.com"
 records:
-  - name: "@"
+  - name: "kitzy.com"
     type: "A"
     ttl: 300
-    values: 
+    values:
       - "198.49.23.144"
       - "198.49.23.145"
       - "198.185.159.144"
@@ -11,18 +11,18 @@ records:
   - name: "www"
     type: "CNAME"
     ttl: 300
-    values: 
+    values:
       - "ext-cust.squarespace.com"
-  - name: "@"
+  - name: "kitzy.com"
     type: "MX"
     ttl: 300
-    values: 
+    values:
       - "1 aspmx.l.google.com"
       - "10 alt3.aspmx.l.google.com"
       - "10 alt4.aspmx.l.google.com"
       - "5 alt1.aspmx.l.google.com"
       - "5 alt2.aspmx.l.google.com"
-  - name: "@"
+  - name: "kitzy.com"
     type: "TXT"
     ttl: 300
     values:
