@@ -25,6 +25,11 @@ This repository manages Route53 DNS hosted zones using Terraform. Zone definitio
    * `AWS_REGION`
    * `TF_API_TOKEN` – the Terraform Cloud API token from step 3
 5. For local development, run `terraform login` once to store your API token.
+6. Before running Terraform locally, export your AWS credentials and region, e.g.
+   ```bash
+   export AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... AWS_REGION=...
+   export TF_VAR_AWS_REGION=$AWS_REGION
+   ```
 
 ## Local validation
 
