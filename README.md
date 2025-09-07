@@ -2,6 +2,8 @@
 
 This repository manages Route53 DNS hosted zones using Terraform. Zone definitions live in [`dns_zones/`](dns_zones) as YAML files, and the Terraform configuration resides in [`terraform/`](terraform).
 
+> **Important:** This is my production DNS repository. If you fork or clone it, delete the contents of `dns_zones/` and add your own zones before running any Terraform commands. Otherwise you risk creating, modifying, or deleting DNS records for domains you do not control.
+
 ## Workflow
 
 * **Pull requests** – Separate checks run for linting and planning. The lint job runs [`yamllint`](https://yamllint.readthedocs.io) and `terraform fmt -check`, and the plan job runs `terraform init`, `terraform validate`, and `terraform plan` to show proposed changes.
@@ -84,3 +86,6 @@ These commands match the CI checks.
 
 * The Terraform configuration automatically ignores NS and SOA records.
 * Zone files must remain YAML; do not commit `terraform.tfstate` or `.terraform` directories.
+* These scripts only support AWS Route53; other DNS providers are not configured.
+* `terraform apply` and the cleanup workflow will overwrite Route53 to match this repository, so review changes carefully.
+* All commands require valid AWS credentials with permissions to manage Route53.
