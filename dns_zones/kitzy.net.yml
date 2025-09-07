@@ -17,7 +17,7 @@ records:
       - "100.34.107.84"
   - name: "@"
     ttl: 300
-    type: A
+    type: TXT
     values:
       - "keybase-site-verification=t-u9Qz4iU7oOd4DMKH0FHW69b_Xo-oCXh7dTaPxmmb0"
       - "google-site-verification=RCPsMhka0hUhhhjWGMPboyjoMoFiNMMlyntpCQsjlvg"
