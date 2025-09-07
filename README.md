@@ -14,6 +14,41 @@ This repository manages Route53 DNS hosted zones using Terraform. Zone definitio
 2. Open a pull request. Lint and plan workflows validate the YAML and preview changes.
 3. After the PR is merged to `main`, the apply workflow syncs Route53 so it matches the repository.
 
+### Record format
+
+Each entry under `records:` supports the following keys:
+
+| key | required | description |
+|-----|----------|-------------|
+| `name` | yes | Record name or `"@"` for the zone apex |
+| `type` | yes | DNS record type (e.g. `A`, `CNAME`) |
+| `ttl` | yes | Time to live in seconds |
+| `values` | yes | List of record values |
+| `set_identifier` | no | Identifier for routing policies |
+| `routing_policy` | no | Object describing a routing policy |
+
+When `routing_policy` is omitted, records use Route53's default **simple** routing. Supported policy types are `weighted`, `latency`, `geolocation`, `failover`, and `multivalue`. See the example below for usage.
+
+```yaml
+records:
+  - name: "www"
+    type: A
+    ttl: 60
+    values: ["1.2.3.4"]
+    set_identifier: primary
+    routing_policy:
+      type: weighted
+      weight: 100
+  - name: "www"
+    type: A
+    ttl: 60
+    values: ["5.6.7.8"]
+    set_identifier: secondary
+    routing_policy:
+      type: weighted
+      weight: 50
+```
+
 ## Terraform Cloud and AWS configuration
 
 1. Sign in to [Terraform Cloud](https://app.terraform.io/) and create an organization (e.g. `kitzy_net`).
