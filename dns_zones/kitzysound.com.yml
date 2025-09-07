@@ -44,10 +44,6 @@ records:
     ttl: 300
     values:
       - "v=DMARC1; p=quarantine; pct=5; rua=mailto:postmaster@kitzysound.com"
-  - name: "_domainkey"
-    type: "TXT"
-    ttl: 0
-    values: []
   - name: "kdu4b3bf2yvj"
     type: "CNAME"
     ttl: 900
