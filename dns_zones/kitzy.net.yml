@@ -1,0 +1,23 @@
+zone_name: "kitzy.net"
+records:
+  - name: "@"
+    ttl: 300
+    type: MX
+    values:
+      - "1 smtp.google.com."
+  - name: "*"
+    ttl: 300
+    type: A
+    values:
+      - "100.34.107.84"
+  - name: "@"
+    ttl: 300
+    type: A
+    values:
+      - "100.34.107.84"
+  - name: "@"
+    ttl: 300
+    type: A
+    values:
+      - "keybase-site-verification=t-u9Qz4iU7oOd4DMKH0FHW69b_Xo-oCXh7dTaPxmmb0"
+      - "google-site-verification=RCPsMhka0hUhhhjWGMPboyjoMoFiNMMlyntpCQsjlvg"
