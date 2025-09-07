@@ -4,7 +4,7 @@ records:
     ttl: 300
     type: MX
     values:
-      - "1 smtp.google.com."
+      - "1 smtp.google.com"
   - name: "*"
     ttl: 300
     type: A
