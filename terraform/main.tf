@@ -39,7 +39,7 @@ locals {
     ]
   ])
   record_map = {
-    for r in local.records : "${r.zone_name}_${r.name}_${r.type}_${coalesce(r.set_identifier, "")}" => r
+    for r in local.records : "${r.zone_name}_${r.name}_${r.type}${r.set_identifier != null ? "_${r.set_identifier}" : ""}" => r
   }
 }
 
