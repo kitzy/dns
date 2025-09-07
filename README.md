@@ -4,7 +4,7 @@ This repository manages Route53 DNS hosted zones using Terraform. Zone definitio
 
 ## Workflow
 
-* **Pull requests** – Separate checks run for linting and planning. The lint job runs [`yamllint`](https://yamllint.readthedocs.io) and `terraform fmt -check`, and the plan job runs `terraform init`, imports existing Route53 state, `terraform validate`, and `terraform plan` to show proposed changes.
+* **Pull requests** – Separate checks run for linting and planning. The lint job runs [`yamllint`](https://yamllint.readthedocs.io) and `terraform fmt -check`, and the plan job runs `terraform init`, `terraform validate`, and `terraform plan` to show proposed changes.
 * **Merge to `main`** – Another workflow runs `terraform apply` to create, update, or remove Route53 zones and records so they match the files in this repo. Zones removed from the repository are deleted from Route53.
 * NS and SOA records are never managed and remain untouched in existing zones.
 * **Nightly cleanup** – A scheduled workflow (also runnable manually) deletes any Route53 records not defined in `dns_zones/` to revert manual changes.
@@ -73,8 +73,7 @@ records:
 yamllint dns_zones
 cd terraform
 terraform fmt -check
- terraform init
-python ../scripts/import_route53.py
+terraform init
 terraform validate
 terraform plan -no-color -input=false
 ```
