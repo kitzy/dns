@@ -54,7 +54,7 @@ resource "aws_route53_record" "this" {
   for_each = local.record_map
 
   zone_id        = aws_route53_zone.this[each.value.zone_name].zone_id
-  name           = each.value.name == "@" ? each.value.zone_name : "${each.value.name}.${each.value.zone_name}"
+  name           = each.value.name == each.value.zone_name ? each.value.name : "${each.value.name}.${each.value.zone_name}"
   type           = each.value.type
   ttl            = each.value.ttl
   records        = each.value.values

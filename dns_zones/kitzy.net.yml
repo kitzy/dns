@@ -1,6 +1,6 @@
 zone_name: "kitzy.net"
 records:
-  - name: "@"
+  - name: "kitzy.net"
     ttl: 300
     type: MX
     values:
@@ -10,12 +10,12 @@ records:
     type: A
     values:
       - "100.34.107.84"
-  - name: "@"
+  - name: "kitzy.net"
     ttl: 300
     type: A
     values:
       - "100.34.107.84"
-  - name: "@"
+  - name: "kitzy.net"
     ttl: 300
     type: TXT
     values:

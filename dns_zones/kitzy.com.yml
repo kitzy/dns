@@ -1,6 +1,6 @@
 zone_name: "kitzy.com"
 records:
-  - name: "@"
+  - name: "kitzy.com"
     type: "A"
     ttl: 300
     values:
@@ -13,7 +13,7 @@ records:
     ttl: 300
     values:
       - "ext-cust.squarespace.com"
-  - name: "@"
+  - name: "kitzy.com"
     type: "MX"
     ttl: 300
     values:
@@ -22,7 +22,7 @@ records:
       - "10 alt4.aspmx.l.google.com"
       - "5 alt1.aspmx.l.google.com"
       - "5 alt2.aspmx.l.google.com"
-  - name: "@"
+  - name: "kitzy.com"
     type: "TXT"
     ttl: 300
     values:

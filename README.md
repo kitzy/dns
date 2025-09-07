@@ -20,7 +20,7 @@ Each entry under `records:` supports the following keys:
 
 | key | required | description |
 |-----|----------|-------------|
-| `name` | yes | Record name or `"@"` for the zone apex |
+| `name` | yes | Record name (use the zone name for apex records) |
 | `type` | yes | DNS record type (e.g. `A`, `CNAME`) |
 | `ttl` | yes | Time to live in seconds |
 | `values` | yes | List of record values |
