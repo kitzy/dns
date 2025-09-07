@@ -14,29 +14,29 @@ This repository manages Route53 DNS hosted zones using Terraform. Zone definitio
 2. Open a pull request. Lint and plan workflows validate the YAML and preview changes.
 3. After the PR is merged to `main`, the apply workflow syncs Route53 so it matches the repository.
 
-## AWS and Terraform setup
+## Terraform Cloud and AWS configuration
 
-1. Create an S3 bucket and DynamoDB table for Terraform state and locking.
-2. Add the following GitHub repository secrets:
+1. Sign in to [Terraform Cloud](https://app.terraform.io/) and create an organization (e.g. `kitzy_net`).
+2. Create a workspace named `dns` and set its execution mode to **Local**.
+3. Generate a user API token from *User Settings → Tokens*.
+4. In the GitHub repository settings, add the following secrets:
    * `AWS_ACCESS_KEY_ID`
    * `AWS_SECRET_ACCESS_KEY`
    * `AWS_REGION`
-   * `TF_BACKEND_BUCKET` – name of the S3 bucket
-   * `TF_BACKEND_KEY` – path within the bucket for the state file (e.g. `route53/terraform.tfstate`)
-   * `TF_BACKEND_DYNAMODB_TABLE` – DynamoDB table used for state locking
-3. Optionally copy `backend.hcl.example` to `backend.hcl` for local development and run `terraform init -backend-config=backend.hcl`.
+   * `TF_API_TOKEN` – the Terraform Cloud API token from step 3
+5. For local development, run `terraform login` once to store your API token.
 
 ## Local validation
 
 ```bash
 yamllint dns_zones
 terraform fmt -check
-terraform init -backend=false
+terraform init
 terraform validate
-terraform plan -no-color -input=false -refresh=false
+terraform plan -no-color -input=false
 ```
 
-These commands are the same checks run in CI.
+These commands match the CI checks.
 
 ## Notes
 

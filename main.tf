@@ -6,7 +6,12 @@ terraform {
       version = "~> 5.0"
     }
   }
-  backend "s3" {}
+  cloud {
+    organization = "kitzy_net"
+    workspaces {
+      name = "dns"
+    }
+  }
 }
 
 provider "aws" {

@@ -1,5 +1,0 @@
-bucket         = "your-s3-bucket"
-key            = "route53/terraform.tfstate"
-region         = "us-east-1"
-dynamodb_table = "your-lock-table"
-encrypt        = true
