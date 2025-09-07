@@ -2,29 +2,45 @@ name: Validate
 
 'on':
   pull_request:
-    paths:
-      - '**.yml'
-      - '**.tf'
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            yaml:
+              - '**/*.yml'
+              - '**/*.yaml'
+            terraform:
+              - '**/*.tf'
       - uses: actions/setup-python@v5
+        if: steps.changes.outputs.yaml == 'true'
         with:
           python-version: '3.x'
       - name: Install yamllint
+        if: steps.changes.outputs.yaml == 'true'
         run: pip install yamllint
       - name: Lint YAML
+        if: steps.changes.outputs.yaml == 'true'
         run: yamllint dns_zones
       - name: Setup Terraform
+        if: steps.changes.outputs.terraform == 'true'
         uses: hashicorp/setup-terraform@v2
         with:
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
       - name: Terraform fmt
+        if: steps.changes.outputs.terraform == 'true'
         working-directory: terraform
         run: terraform fmt -check
+      - name: Skip lint
+        if: steps.changes.outputs.yaml != 'true' && steps.changes.outputs.terraform != 'true'
+        run: echo 'No YAML or Terraform changes detected; skipping lint.'
 
   plan:
     needs: lint
@@ -36,16 +52,31 @@ jobs:
       TF_VAR_AWS_REGION: ${{ secrets.AWS_REGION }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            terraform:
+              - '**/*.tf'
       - name: Setup Terraform
+        if: steps.changes.outputs.terraform == 'true'
         uses: hashicorp/setup-terraform@v2
         with:
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
       - name: Terraform init
+        if: steps.changes.outputs.terraform == 'true'
         working-directory: terraform
         run: terraform init
       - name: Terraform validate
+        if: steps.changes.outputs.terraform == 'true'
         working-directory: terraform
         run: terraform validate
       - name: Terraform plan
+        if: steps.changes.outputs.terraform == 'true'
         working-directory: terraform
         run: terraform plan -no-color -input=false
+      - name: Skip plan
+        if: steps.changes.outputs.terraform != 'true'
+        run: echo 'No Terraform changes detected; skipping plan.'
