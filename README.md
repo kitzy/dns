@@ -1,6 +1,6 @@
 # DNS Zone Management with Terraform and Route53
 
-This repository manages Route53 DNS hosted zones using Terraform. Zone definitions live in [`dns_zones/`](dns_zones) as YAML files.
+This repository manages Route53 DNS hosted zones using Terraform. Zone definitions live in [`dns_zones/`](dns_zones) as YAML files, and the Terraform configuration resides in [`terraform/`](terraform).
 
 ## Workflow
 
@@ -30,6 +30,7 @@ This repository manages Route53 DNS hosted zones using Terraform. Zone definitio
 
 ```bash
 yamllint dns_zones
+cd terraform
 terraform fmt -check
 terraform init
 terraform validate

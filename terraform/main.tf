@@ -19,11 +19,11 @@ provider "aws" {
 }
 
 locals {
-  zone_files = fileset("${path.module}/dns_zones", "*.yml")
+  zone_files = fileset("${path.module}/../dns_zones", "*.yml")
   zones = {
     for file in local.zone_files :
-    yamldecode(file("${path.module}/dns_zones/${file}")).zone_name =>
-    yamldecode(file("${path.module}/dns_zones/${file}"))
+    yamldecode(file("${path.module}/../dns_zones/${file}")).zone_name =>
+    yamldecode(file("${path.module}/../dns_zones/${file}"))
   }
   records = flatten([
     for zname, z in local.zones : [
