@@ -41,7 +41,7 @@ for filename in os.listdir(DNS_ZONES_DIR):
             rtype = record["Type"]
             if rtype in ("NS", "SOA"):
                 continue
-            name = record["Name"].rstrip(".")
+            name = record["Name"].rstrip(".").replace("\\052", "*")
             set_id = record.get("SetIdentifier")
             key = (name, rtype, set_id)
             if key not in defined:
