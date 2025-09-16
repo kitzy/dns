@@ -59,7 +59,7 @@ records:
     ttl: 300
     values:
       - "dkim2.mcsv.net"
-      
+
   - name: "k3._domainkey"
     type: "CNAME"
     ttl: 300
