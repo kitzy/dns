@@ -1,0 +1,67 @@
+zone_name: "leftofthedial.fm"
+
+records:
+  - name: "*"
+    ttl: 300
+    type: A
+    values:
+      - "100.34.107.84"
+
+  - name: "leftofthedial.fm"
+    ttl: 300
+    type: A
+    values:
+      - "100.34.107.84"
+
+  - name: "podcast"
+    type: "A"
+    ttl: 300
+    values:
+      - "204.48.23.119"
+
+  - name: "leftofthedial.fm"
+    type: "MX"
+    ttl: 300
+    values:
+      - "1 aspmx.l.google.com"
+      - "10 alt3.aspmx.l.google.com"
+      - "10 alt4.aspmx.l.google.com"
+      - "5 alt1.aspmx.l.google.com"
+      - "5 alt2.aspmx.l.google.com"
+
+  - name: "leftofthedial.fm"
+    type: "TXT"
+    ttl: 300
+    values:
+      - "google-site-verification=5KUbEFT7YJbQ3LvoscWU4wdBdbo8BiIo63jHpiffpeo"
+      - "v=spf1 include:_spf.google.com include:spf.mandrillapp.com ~all"
+
+  - name: "_atproto"
+    type: "TXT"
+    ttl: 300
+    values:
+      - "did=did:plc:wgkaaql4glcuxe4pgk3hd64b"
+
+  - name: "_dmarc"
+    type: "TXT"
+    ttl: 300
+    values:
+      - "DMARC1; p=quarantine; pct=5; rua=mailto:postmaster@kitzy.com"
+
+  - name: "google._domainkey"
+    type: "TXT"
+    ttl: 300
+    values:
+      - "v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCZNxK8v6SMjRk6OjkjYnjZtnR1c4qtiiPYp0OehDONyL2OtlqxA50pZX7R2edRvsP0jm40isMVEySNKJKlQGOcO1+eiuh1Dol0lrf3oncxwzyIqH1GLz6WJ2KWag5AfLmLAiWBT1KdrNrfDgD50zzpFp9L7IFiq6yjR+U2LKvQ+QIDAQAB
+
+  - name: "k2._domainkey"
+    tyope: "CNAME"
+    ttl: 300
+    values:
+      - "dkim2.mcsv.net"
+      
+  - name: "k3._domainkey"
+    tyope: "CNAME"
+    ttl: 300
+    values:
+      - "dkim3.mcsv.net"
