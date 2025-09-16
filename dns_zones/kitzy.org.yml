@@ -1,0 +1,27 @@
+zone_name: "kitzy.org"
+records:
+  - name: "*"
+    ttl: 300
+    type: A
+    values:
+      - "100.34.107.84"
+  - name: "kitzy.org"
+    ttl: 300
+    type: A
+    values:
+      - "100.34.107.84"
+  - name: "kitzy.org"
+    type: "MX"
+    ttl: 300
+    values:
+      - "1 aspmx.l.google.com"
+      - "10 alt3.aspmx.l.google.com"
+      - "10 alt4.aspmx.l.google.com"
+      - "5 alt1.aspmx.l.google.com"
+      - "5 alt2.aspmx.l.google.com"
+  - name: "kitzy.com"
+    type: "TXT"
+    ttl: 300
+    values:
+      - "google-site-verification=9yl20ZqS6vDq-MrXFyOanm4vp0UurINP66unuNk3Tvo
+      - "keybase-site-verification=MseDUEf46cWFTUbrC7uwO2c4Soy3361v_oGzc0EFM6g"
