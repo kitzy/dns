@@ -37,3 +37,8 @@ records:
     ttl: 300
     values:
       - "v=DMARC1; p=quarantine; pct=5; rua=mailto:postmaster@kitzy.com"
+  - name: "_atproto"
+    type: "TXT"
+    ttl: 300
+    values:
+      - "did=did:plc:fvl42rg3p6oqkpwjhdn7mljm"
