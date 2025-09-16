@@ -55,13 +55,13 @@ records:
       - "v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCZNxK8v6SMjRk6OjkjYnjZtnR1c4qtiiPYp0OehDONyL2OtlqxA50pZX7R2edRvsP0jm40isMVEySNKJKlQGOcO1+eiuh1Dol0lrf3oncxwzyIqH1GLz6WJ2KWag5AfLmLAiWBT1KdrNrfDgD50zzpFp9L7IFiq6yjR+U2LKvQ+QIDAQAB
 
   - name: "k2._domainkey"
-    tyope: "CNAME"
+    type: "CNAME"
     ttl: 300
     values:
       - "dkim2.mcsv.net"
       
   - name: "k3._domainkey"
-    tyope: "CNAME"
+    type: "CNAME"
     ttl: 300
     values:
       - "dkim3.mcsv.net"
