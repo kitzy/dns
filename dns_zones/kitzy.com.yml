@@ -37,8 +37,3 @@ records:
     ttl: 300
     values:
       - "v=DMARC1; p=quarantine; pct=5; rua=mailto:postmaster@kitzy.com"
-  - name: "4tamj4m3z85rzzxwh238"
-    type: "CNAME"
-    ttl: 300
-    values:
-      - "verify.squarespace.com"
