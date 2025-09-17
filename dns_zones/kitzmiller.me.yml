@@ -1,0 +1,32 @@
+zone_name: "kitzmiller.me"
+records:
+  - name: "*"
+    ttl: 300
+    type: A
+    values:
+      - "100.34.107.84"
+  - name: "kitzmiller.me"
+    ttl: 300
+    type: A
+    values:
+      - "100.34.107.84"
+  - name: "kitzmiller.me"
+    type: "MX"
+    ttl: 300
+    values:
+      - "1 aspmx.l.google.com"
+      - "10 alt3.aspmx.l.google.com"
+      - "10 alt4.aspmx.l.google.com"
+      - "5 alt1.aspmx.l.google.com"
+      - "5 alt2.aspmx.l.google.com"
+  - name: "kitzmiller.me"
+    type: "TXT"
+    ttl: 300
+    values:
+      - "google-site-verification=Dxo3vZD8eeydzSl1Eag7YzxFV8wr25ImjPUNn2r1tNE"
+      - "keybase-site-verification=jpEzRbREF_B7mPvKhgiGIvXsn1w4d2LP1EfNXckNcY8"
+  - name: "google._domainkey"
+    type: "TXT"
+    ttl: 300
+    values:
+      - "v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDHel7XosBkjMe2tBFqVaBqNUiBKf5eHGWjI2WwGRKXidGkOqgh1vRLV1XSlee+sWpFlzyXGbWFv2492YMsYxVLkVEVrJBbRhxHIifSCYiFRNYVTH7GsWWFq34b1Aao7CGKsbpLn+gIQREmISL72O5CAovIk+ZB9KTN2yh3q8Fy+wIDAQAB"
