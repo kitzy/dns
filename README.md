@@ -54,7 +54,7 @@ records:
 
 ## Terraform Cloud and AWS configuration
 
-1. Sign in to [Terraform Cloud](https://app.terraform.io/) and create an organization (e.g. `kitzy_net`).
+1. Sign in to [Terraform Cloud](https://app.terraform.io/) and create an organization.
 2. Create a workspace named `dns` and set its execution mode to **Local**.
 3. Generate a user API token from *User Settings → Tokens*.
 4. In the GitHub repository settings, add the following secrets:
