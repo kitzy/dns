@@ -42,3 +42,8 @@ records:
     ttl: 300
     values:
       - "did=did:plc:fvl42rg3p6oqkpwjhdn7mljm"
+  - name: "_github-pages-challenge-kitzy"
+    type: "TXT"
+    ttl: 300
+    values:
+      - "4dda16651817f86873783b99c24f83"
