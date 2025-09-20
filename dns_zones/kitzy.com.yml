@@ -23,9 +23,9 @@ records:
       - "kitzy.github.io"
   - name: "*"
     ttl: 300
-    type: A
+    type: CNAME
     values:
-      - "100.34.107.84"
+      - "kitzy.github.io"
   - name: "kitzy.com"
     type: "MX"
     ttl: 300
