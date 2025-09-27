@@ -33,13 +33,13 @@ locals {
     yamldecode(file("${path.module}/../dns_zones/${file}")).zone_name =>
     yamldecode(file("${path.module}/../dns_zones/${file}"))
   }
-  
+
   # Separate zones by provider
   route53_zones = {
     for zname, z in local.zones :
     zname => z if try(z.provider, "route53") == "route53"
   }
-  
+
   cloudflare_zones = {
     for zname, z in local.zones :
     zname => z if try(z.provider, "route53") == "cloudflare"
@@ -58,7 +58,7 @@ locals {
       } if upper(r.type) != "NS" && upper(r.type) != "SOA"
     ]
   ])
-  
+
   # Cloudflare records (only simple routing supported)
   cloudflare_records = flatten([
     for zname, z in local.cloudflare_zones : [
@@ -74,7 +74,7 @@ locals {
   route53_record_map = {
     for r in local.route53_records : "${r.zone_name}_${r.name}_${r.type}${r.set_identifier != null ? "_${r.set_identifier}" : ""}" => r
   }
-  
+
   # Flatten Cloudflare records to handle multiple values
   cloudflare_record_map = {
     for idx, r in flatten([
