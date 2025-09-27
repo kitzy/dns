@@ -34,15 +34,26 @@ locals {
     yamldecode(file("${path.module}/../dns_zones/${file}"))
   }
 
-  # Separate zones by provider
+  # Helper function to get providers for a zone (supports both single and multi-provider formats)
+  zone_providers = {
+    for zname, z in local.zones :
+    zname => (
+      # Multi-provider format
+      can(z.providers) ? z.providers :
+      # Single provider format (with route53 default)
+      [try(z.provider, "route53")]
+    )
+  }
+
+  # Separate zones by provider (zones can appear in multiple provider maps)
   route53_zones = {
     for zname, z in local.zones :
-    zname => z if try(z.provider, "route53") == "route53"
+    zname => z if contains(local.zone_providers[zname], "route53")
   }
 
   cloudflare_zones = {
     for zname, z in local.zones :
-    zname => z if try(z.provider, "route53") == "cloudflare"
+    zname => z if contains(local.zone_providers[zname], "cloudflare")
   }
   # Route53 records
   route53_records = flatten([
