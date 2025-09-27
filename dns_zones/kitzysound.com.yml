@@ -1,4 +1,5 @@
 zone_name: "kitzysound.com"
+provider: route53
 records:
   - name: "kitzysound.com"
     type: "A"

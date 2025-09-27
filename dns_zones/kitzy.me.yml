@@ -1,4 +1,5 @@
 zone_name: "kitzy.me"
+provider: route53
 records:
   - name: "*"
     ttl: 300
