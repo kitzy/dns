@@ -29,7 +29,7 @@ This## Terraform Cloud and Provider Configuration
 ## Workflow
 
 * **Pull requests** – Separate checks run for validation and planning. The validation job runs:
-  - Zone configuration validation (checks provider field and structure)
+  - Zone configuration validation (checks provider/providers field and structure)
   - [`yamllint`](https://yamllint.readthedocs.io) for YAML syntax
   - `terraform fmt -check` for Terraform formatting
   
@@ -40,31 +40,46 @@ This## Terraform Cloud and Provider Configuration
 
 ## Provider Selection
 
-Each zone can specify which DNS provider to use by setting the `provider` field in the YAML file:
+Each zone can specify DNS provider(s) using either single or multi-provider formats:
 
-- `route53` - Uses AWS Route53  
-- `cloudflare` - Uses Cloudflare DNS
-
-**Route53 zones** support all routing policies (weighted, latency, geolocation, failover, multivalue).  
-**Cloudflare zones** currently support simple routing only.
-
-⚠️ **Important**: The `provider` field is **required** in all zone files. The validation workflow will fail if this field is missing or contains an unsupported provider.
-
+### Single Provider Format
 ```yaml
 zone_name: "example.com"
-provider: cloudflare  # or route53 (default)
-records:
-  - name: "example.com"
-    type: A
-    ttl: 300
-    values:
-      - "1.2.3.4"
+provider: route53  # or cloudflare
+records: [...]
 ```
+
+### Multi-Provider Format  
+```yaml
+zone_name: "example.com"
+providers:
+  - route53
+  - cloudflare
+records: [...]
+```
+
+**Supported providers:**
+- `route53` - AWS Route53 (supports all routing policies)
+- `cloudflare` - Cloudflare DNS (simple routing only)
+
+### 🔄 Safe Zone Migration
+
+The multi-provider format enables **zero-downtime migrations**:
+
+1. **Start with Route53**: `provider: route53`
+2. **Add Cloudflare**: Change to `providers: [route53, cloudflare]`
+3. **Update NS records** at your registrar to point to Cloudflare
+4. **Wait for DNS propagation** (24-48 hours)
+5. **Remove Route53**: Change to `provider: cloudflare`
+
+⚠️ **Important**: Either `provider` or `providers` field is **required**. You cannot specify both.
 
 ## Adding or modifying zones
 
 1. Create a new YAML file in `dns_zones/` with the zone name. See the existing files for structure.
-2. Specify the `provider` field (`route53` or `cloudflare`). If omitted, defaults to `route53`.
+2. Specify either:
+   - `provider: route53` or `provider: cloudflare` (single provider)
+   - `providers: [route53, cloudflare]` (multi-provider for migrations)
 3. Open a pull request. Lint and plan workflows validate the YAML and preview changes.
 4. After the PR is merged to `main`, the apply workflow syncs the DNS provider so it matches the repository.
 
@@ -75,7 +90,10 @@ Each zone file supports the following top-level keys:
 | key | required | description |
 |-----|----------|-------------|
 | `zone_name` | yes | The domain name for the zone |
-| `provider` | no | DNS provider: `route53` (default) or `cloudflare` |
+| `provider` | no* | Single DNS provider: `route53` or `cloudflare` |
+| `providers` | no* | List of DNS providers: `[route53, cloudflare]` |
+
+*Either `provider` or `providers` is required, but not both.
 | `records` | yes | Array of DNS records for the zone |
 
 ### Record format

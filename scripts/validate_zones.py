@@ -44,15 +44,38 @@ def validate_zone_file(file_path):
         if actual_filename != expected_filename:
             errors.append(f"Filename '{actual_filename}' does not match zone_name '{zone_name}' (expected '{expected_filename}')")
     
-    # Check provider field
-    if 'provider' not in data:
-        errors.append("Missing required field: provider")
-    else:
+    # Check provider field(s) - support both single and multi-provider formats
+    has_provider = 'provider' in data
+    has_providers = 'providers' in data
+    
+    if not has_provider and not has_providers:
+        errors.append("Missing required field: either 'provider' or 'providers'")
+    elif has_provider and has_providers:
+        errors.append("Cannot specify both 'provider' and 'providers' fields. Use one or the other.")
+    elif has_provider:
+        # Single provider format
         provider = data['provider']
         if not isinstance(provider, str):
             errors.append(f"Provider must be a string, got {type(provider).__name__}")
         elif provider not in SUPPORTED_PROVIDERS:
             errors.append(f"Unsupported provider '{provider}'. Supported providers: {', '.join(sorted(SUPPORTED_PROVIDERS))}")
+    elif has_providers:
+        # Multi-provider format
+        providers = data['providers']
+        if not isinstance(providers, list):
+            errors.append(f"Providers must be a list, got {type(providers).__name__}")
+        elif len(providers) == 0:
+            errors.append("Providers list cannot be empty")
+        else:
+            for i, provider in enumerate(providers):
+                if not isinstance(provider, str):
+                    errors.append(f"Provider at index {i} must be a string, got {type(provider).__name__}")
+                elif provider not in SUPPORTED_PROVIDERS:
+                    errors.append(f"Unsupported provider '{provider}' at index {i}. Supported providers: {', '.join(sorted(SUPPORTED_PROVIDERS))}")
+            
+            # Check for duplicates
+            if len(providers) != len(set(providers)):
+                errors.append("Duplicate providers found in providers list")
     
     # Check records field
     if 'records' not in data:
