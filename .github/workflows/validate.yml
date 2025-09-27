@@ -17,18 +17,23 @@ jobs:
             yaml:
               - '**/*.yml'
               - '**/*.yaml'
+            zones:
+              - 'dns_zones/*.yml'
             terraform:
               - '**/*.tf'
       - uses: actions/setup-python@v5
         if: steps.changes.outputs.yaml == 'true'
         with:
           python-version: '3.x'
-      - name: Install yamllint
-        if: steps.changes.outputs.yaml == 'true'
-        run: pip install yamllint
+      - name: Install dependencies
+        if: steps.changes.outputs.yaml == 'true' || steps.changes.outputs.zones == 'true'
+        run: pip install yamllint pyyaml
       - name: Lint YAML
         if: steps.changes.outputs.yaml == 'true'
         run: yamllint dns_zones
+      - name: Validate zone configuration
+        if: steps.changes.outputs.zones == 'true'
+        run: python3 scripts/validate_zones.py
       - name: Setup Terraform
         if: steps.changes.outputs.terraform == 'true'
         uses: hashicorp/setup-terraform@v2
@@ -50,6 +55,8 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
       TF_VAR_AWS_REGION: ${{ secrets.AWS_REGION }}
+      TF_VAR_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      TF_VAR_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
         with:

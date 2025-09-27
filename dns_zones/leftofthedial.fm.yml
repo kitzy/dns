@@ -1,4 +1,5 @@
 zone_name: "leftofthedial.fm"
+provider: route53
 
 records:
   - name: "*"
