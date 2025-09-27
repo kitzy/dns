@@ -1,6 +1,6 @@
 # DNS Zone Management with Terraform
 
-This## Terraform Cloud and Provider Configuration
+## Terraform Cloud and Provider Configuration
 
 1. Sign in to [Terraform Cloud](https://app.terraform.io/) and create an organization.
 2. Create a workspace named `dns` and set its execution mode to **Local**.
