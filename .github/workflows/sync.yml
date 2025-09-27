@@ -13,6 +13,7 @@ jobs:
       AWS_REGION: ${{ secrets.AWS_REGION }}
       TF_VAR_AWS_REGION: ${{ secrets.AWS_REGION }}
       TF_VAR_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      TF_VAR_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

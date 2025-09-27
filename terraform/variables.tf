@@ -8,3 +8,9 @@ variable "CLOUDFLARE_API_TOKEN" {
   type        = string
   sensitive   = true
 }
+
+variable "CLOUDFLARE_ACCOUNT_ID" {
+  description = "Cloudflare account ID for managing DNS zones"
+  type        = string
+  sensitive   = true
+}

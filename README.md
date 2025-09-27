@@ -10,6 +10,7 @@ This## Terraform Cloud and Provider Configuration
    * `AWS_SECRET_ACCESS_KEY` (for Route53 zones)
    * `AWS_REGION` (for Route53 zones)
    * `CLOUDFLARE_API_TOKEN` (for Cloudflare zones)
+   * `CLOUDFLARE_ACCOUNT_ID` (for Cloudflare zones)
    * `TF_API_TOKEN` – the Terraform Cloud API token from step 3
 5. For local development, run `terraform login` once to store your API token.
 6. Before running Terraform locally, export your provider credentials, e.g.
@@ -20,6 +21,7 @@ This## Terraform Cloud and Provider Configuration
    
    # For Cloudflare zones
    export TF_VAR_CLOUDFLARE_API_TOKEN=your_cloudflare_token
+   export TF_VAR_CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id
    ```ges DNS hosted zones using Terraform with support for both AWS Route53 and Cloudflare providers. Zone definitions live in [`dns_zones/`](dns_zones) as YAML files, and the Terraform configuration resides in [`terraform/`](terraform).
 
 > **Important:** This is my production DNS repository. If you fork or clone it, delete the contents of `dns_zones/` and add your own zones before running any Terraform commands. Otherwise you risk creating, modifying, or deleting DNS records for domains you do not control.

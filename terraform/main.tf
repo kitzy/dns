@@ -144,8 +144,9 @@ resource "aws_route53_record" "this" {
 
 # Cloudflare Zone Resources
 resource "cloudflare_zone" "this" {
-  for_each = local.cloudflare_zones
-  zone     = each.value.zone_name
+  for_each   = local.cloudflare_zones
+  zone       = each.value.zone_name
+  account_id = var.CLOUDFLARE_ACCOUNT_ID
 }
 
 # Cloudflare Record Resources (simple routing only)
