@@ -70,7 +70,7 @@ jobs:
             zones:
               - 'dns_zones/*.yml'
       - name: Setup Terraform
-        if: steps.changes.outputs.terraform == 'true'
+        if: steps.changes.outputs.terraform == 'true' || steps.changes.outputs.zones == 'true'
         uses: hashicorp/setup-terraform@v2
         with:
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
