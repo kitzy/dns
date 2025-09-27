@@ -78,7 +78,7 @@ locals {
 
   # Flatten Cloudflare records to handle multiple values
   cloudflare_record_map = {
-    for idx, r in flatten([
+    for r in flatten([
       for record in local.cloudflare_records : [
         for value_idx, value in record.values : {
           zone_name = record.zone_name
