@@ -5,6 +5,11 @@ records:
     type: MX
     values:
       - "1 smtp.google.com"
+  - name: "status"
+    ttl: 300
+    type: CNAME
+    values:
+      - "statuspage.betteruptime.com"
   - name: "*"
     ttl: 300
     type: A
