@@ -14,7 +14,7 @@ import yaml
 from pathlib import Path
 
 # Supported DNS providers
-SUPPORTED_PROVIDERS = {'route53', 'cloudflare'}
+SUPPORTED_PROVIDERS = frozenset(['route53', 'cloudflare'])
 
 def validate_zone_file(file_path):
     """Validate a single zone file."""
