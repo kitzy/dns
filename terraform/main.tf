@@ -99,7 +99,7 @@ locals {
           name      = record.name
           type      = record.type
           ttl       = record.ttl
-          content   = upper(record.type) == "MX" ? split(" ", value)[1] : value
+          content   = upper(record.type) == "MX" ? split(" ", value)[1] : (upper(record.type) == "TXT" ? "\"${value}\"" : value)
           priority  = upper(record.type) == "MX" ? tonumber(split(" ", value)[0]) : null
           key       = "${record.zone_name}_${record.name}_${record.type}_${value_idx}"
         }
