@@ -1,0 +1,19 @@
+zone_name: "ixatra.com"
+provider: route53
+records:
+  - name: "ixatra.com"
+    ttl: 300
+    type: MX
+    mx_records:
+      - priority: 1
+        value: "smtp.google.com"
+  - name: "*"
+    ttl: 300
+    type: A
+    values:
+      - "100.34.107.84"
+  - name: "ixatra.com"
+    ttl: 300
+    type: A
+    values:
+      - "100.34.107.84"
