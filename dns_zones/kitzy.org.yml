@@ -14,12 +14,17 @@ records:
   - name: "kitzy.org"
     type: "MX"
     ttl: 300
-    values:
-      - "1 aspmx.l.google.com"
-      - "10 alt3.aspmx.l.google.com"
-      - "10 alt4.aspmx.l.google.com"
-      - "5 alt1.aspmx.l.google.com"
-      - "5 alt2.aspmx.l.google.com"
+    mx_records:
+      - priority: 1
+        value: "aspmx.l.google.com"
+      - priority: 5
+        value: "alt1.aspmx.l.google.com"
+      - priority: 5
+        value: "alt2.aspmx.l.google.com"
+      - priority: 10
+        value: "alt3.aspmx.l.google.com"
+      - priority: 10
+        value: "alt4.aspmx.l.google.com"
   - name: "kitzy.org"
     type: "TXT"
     ttl: 300
