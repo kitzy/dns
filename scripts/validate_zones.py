@@ -82,6 +82,30 @@ def validate_zone_file(file_path):
         errors.append("Missing required field: records")
     elif not isinstance(data['records'], list):
         errors.append("Records field must be a list")
+    else:
+        # Validate individual records
+        for i, record in enumerate(data['records']):
+            if not isinstance(record, dict):
+                errors.append(f"Record at index {i} must be an object")
+                continue
+                
+            # Check if it's an MX record with the new format
+            if record.get('type', '').upper() == 'MX' and 'mx_records' in record:
+                if not isinstance(record['mx_records'], list):
+                    errors.append(f"MX record at index {i}: mx_records must be a list")
+                else:
+                    for j, mx in enumerate(record['mx_records']):
+                        if not isinstance(mx, dict):
+                            errors.append(f"MX record at index {i}, mx_records[{j}] must be an object")
+                            continue
+                        if 'priority' not in mx:
+                            errors.append(f"MX record at index {i}, mx_records[{j}] missing 'priority' field")
+                        elif not isinstance(mx['priority'], int):
+                            errors.append(f"MX record at index {i}, mx_records[{j}] priority must be an integer")
+                        if 'value' not in mx:
+                            errors.append(f"MX record at index {i}, mx_records[{j}] missing 'value' field")
+                        elif not isinstance(mx['value'], str):
+                            errors.append(f"MX record at index {i}, mx_records[{j}] value must be a string")
     
     return errors
 

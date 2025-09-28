@@ -4,8 +4,9 @@ records:
   - name: "kitzy.net"
     ttl: 300
     type: MX
-    values:
-      - "1 smtp.google.com"
+    mx_records:
+      - priority: 1
+        value: "smtp.google.com"
   - name: "status"
     ttl: 300
     type: CNAME

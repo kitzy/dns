@@ -4,12 +4,17 @@ records:
   - name: "kitzy.io"
     ttl: 300
     type: MX
-    values:
-      - "1 aspmx.l.google.com."
-      - "5 alt1.aspmx.l.google.com."
-      - "5 alt2.aspmx.l.google.com."
-      - "10 aspmx2.googlemail.com."
-      - "10 aspmx3.googlemail.com."
+    mx_records:
+      - priority: 1
+        value: "aspmx.l.google.com"
+      - priority: 5
+        value: "alt1.aspmx.l.google.com"
+      - priority: 5
+        value: "alt2.aspmx.l.google.com"
+      - priority: 10
+        value: "aspmx2.googlemail.com"
+      - priority: 10
+        value: "aspmx3.googlemail.com"
   - name: "kitzy.io"
     ttl: 300
     type: TXT

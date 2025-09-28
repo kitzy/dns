@@ -59,11 +59,13 @@ locals {
   route53_records = flatten([
     for zname, z in local.route53_zones : [
       for r in z.records : {
-        zone_name      = zname
-        name           = r.name
-        type           = r.type
-        ttl            = r.ttl
-        values         = r.values
+        zone_name = zname
+        name      = r.name
+        type      = r.type
+        ttl       = r.ttl
+        values = upper(r.type) == "MX" && can(r.mx_records) ? [
+          for mx in r.mx_records : "${mx.priority} ${mx.value}"
+        ] : r.values
         set_identifier = try(r.set_identifier, null)
         routing_policy = try(r.routing_policy, null)
       } if upper(r.type) != "NS" && upper(r.type) != "SOA"
@@ -78,7 +80,9 @@ locals {
         name      = r.name
         type      = r.type
         ttl       = r.ttl
-        values    = r.values
+        values = upper(r.type) == "MX" && can(r.mx_records) ? [
+          for mx in r.mx_records : "${mx.priority} ${mx.value}"
+        ] : r.values
       } if upper(r.type) != "NS" && upper(r.type) != "SOA"
     ]
   ])
@@ -95,7 +99,8 @@ locals {
           name      = record.name
           type      = record.type
           ttl       = record.ttl
-          value     = value
+          content   = upper(record.type) == "MX" ? split(" ", value)[1] : value
+          priority  = upper(record.type) == "MX" ? tonumber(split(" ", value)[0]) : null
           key       = "${record.zone_name}_${record.name}_${record.type}_${value_idx}"
         }
       ]
@@ -164,9 +169,10 @@ resource "cloudflare_zone" "this" {
 resource "cloudflare_record" "this" {
   for_each = local.cloudflare_record_map
 
-  zone_id = cloudflare_zone.this[each.value.zone_name].id
-  name    = each.value.name == each.value.zone_name ? "@" : each.value.name
-  type    = each.value.type
-  ttl     = each.value.ttl
-  content = each.value.value
+  zone_id  = cloudflare_zone.this[each.value.zone_name].id
+  name     = each.value.name == each.value.zone_name ? "@" : each.value.name
+  type     = each.value.type
+  ttl      = each.value.ttl
+  content  = each.value.content
+  priority = each.value.priority
 }
