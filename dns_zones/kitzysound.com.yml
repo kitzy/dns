@@ -39,6 +39,7 @@ records:
     values:
       - "google-site-verification=vSXT3TxITKwK3Re5A3bdo-lTDU1ITQEjnLOo64fvJu0"
       - "google-site-verification=9W_ciHGBbufALyTyzxlbxmQn8S9MHHrhF2Mt0l2v5uE"
+      - "1password-site-verification=6642JJOABJC2FGBMEAMCHYPZGU"
       - "v=spf1 include:_spf.google.com include:mailgun.org ~all"
   - name: "google._domainkey"
     type: "TXT"
