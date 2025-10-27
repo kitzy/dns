@@ -99,7 +99,7 @@ locals {
           zone_name = record.zone_name
           name      = record.name
           type      = record.type
-          ttl       = record.ttl
+          ttl       = record.proxied ? 1 : record.ttl # Cloudflare requires TTL=1 for proxied records
           content   = upper(record.type) == "MX" ? split(" ", value)[1] : (upper(record.type) == "TXT" ? "\"${value}\"" : value)
           priority  = upper(record.type) == "MX" ? tonumber(split(" ", value)[0]) : null
           proxied   = record.proxied

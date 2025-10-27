@@ -60,7 +60,7 @@ Only certain record types can be proxied:
 | SRV | ❌ No | Service records |
 | NS | ❌ No | Nameservers |
 
-**Important:** Attempting to proxy unsupported record types will cause errors during `terraform apply`.
+**Important:** The validation script will **reject** zone files that set `proxied: true` on unsupported record types (MX, TXT, NS, SRV, etc.). You'll get a clear error message indicating which records are invalid and must be changed to `proxied: false` or have the field removed.
 
 ## Examples
 
@@ -68,7 +68,7 @@ Only certain record types can be proxied:
 ```yaml
 - name: "example.com"
   type: A
-  ttl: 300
+  ttl: 1  # Any value is fine; automatically changed to 1 by Terraform
   values: ["203.0.113.1"]
   proxied: true  # Enable DDoS protection and CDN
 ```
@@ -77,7 +77,7 @@ Only certain record types can be proxied:
 ```yaml
 - name: "api"
   type: A
-  ttl: 300
+  ttl: 300  # This TTL value will be used as-is
   values: ["203.0.113.2"]
   proxied: false  # Direct connection for API performance
 ```
@@ -124,13 +124,26 @@ Only certain record types can be proxied:
 ## TTL Behavior
 
 When `proxied: true`:
-- The TTL value in your configuration is **ignored**
-- Cloudflare controls the TTL (typically 300 seconds)
-- This is automatic and cannot be changed
+- The TTL value in your YAML configuration is **automatically overridden to 1**
+- This is required by Cloudflare's API for proxied records
+- You can specify any TTL value in your YAML file (e.g., 300), but Terraform will automatically use 1 when applying
+- Cloudflare controls the actual caching behavior regardless of the TTL value
+- This override happens transparently - no need to update your zone files
 
 When `proxied: false`:
-- The TTL value you specify is used
+- The TTL value you specify is used exactly as written
 - Standard DNS TTL behavior applies
+- Values typically range from 60 (1 minute) to 86400 (24 hours)
+
+### Why TTL is 1 for Proxied Records
+
+Cloudflare requires TTL to be set to 1 for proxied records because:
+1. The actual IP address returned is Cloudflare's proxy IP, not your origin
+2. Cloudflare handles caching and TTL internally
+3. This allows Cloudflare to quickly update which proxy IPs are used
+4. It doesn't affect actual caching behavior (Cloudflare manages this separately)
+
+**Example:** You can keep your YAML files consistent with `ttl: 300` for all records. When a record has `proxied: true`, Terraform automatically uses `ttl: 1` when creating the record in Cloudflare.
 
 ## Migration Strategy
 
@@ -143,6 +156,14 @@ If you're enabling proxy for an existing zone:
 5. **Keep options** - Leave critical services (mail, SSH) in DNS-only mode
 
 ## Troubleshooting
+
+### TTL Validation Error
+If you previously encountered this error:
+```
+Error: error validating record @: ttl must be set to 1 when `proxied` is true
+```
+
+**This is now handled automatically.** The Terraform configuration automatically sets TTL to 1 for any record with `proxied: true`. You can keep any TTL value in your YAML files (e.g., 300) for consistency - it will be automatically overridden to 1 for proxied records.
 
 ### Connection Issues
 If services stop working after enabling proxy:
@@ -184,14 +205,34 @@ The `proxied` field is **ignored for Route53 records** - it only affects Cloudfl
 
 ## Validation
 
-The validation script checks that:
-- `proxied` is a boolean value (`true` or `false`)
-- No other validation is performed (Cloudflare API will reject invalid configurations)
+The validation script performs the following checks:
+- `proxied` must be a boolean value (`true` or `false`)
+- `proxied: true` can **only** be used with A, AAAA, and CNAME record types
+- If you try to set `proxied: true` on unsupported record types (MX, TXT, NS, SRV, etc.), validation will fail with a helpful error message
+- **Warning (non-blocking):** If you use the `proxied` field on a zone that doesn't have Cloudflare as a provider, you'll get a warning (but validation will still pass). This helps catch configuration mistakes where the field will be ignored.
+
+**Example validation error:**
+```
+❌ example.com.yml:
+  - Record at index 2 (example.com, MX): Cannot set 'proxied: true' for MX records. 
+    Only A, AAAA, CNAME records can be proxied through Cloudflare. 
+    Remove the 'proxied' field or set it to 'false'.
+```
+
+**Example validation warning:**
+```
+⚠️  example.com.yml:
+  - Record at index 0 (example.com, A): 'proxied' field is set but this zone does not 
+    use Cloudflare as a provider. The 'proxied' field only applies to Cloudflare zones 
+    and will be ignored by other providers.
+```
 
 Run validation:
 ```bash
 python3 scripts/validate_zones.py
 ```
+
+This validation happens automatically in CI/CD before any Terraform changes are applied, preventing configuration errors before they reach Cloudflare's API.
 
 ## Additional Resources
 
