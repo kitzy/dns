@@ -89,6 +89,11 @@ def validate_zone_file(file_path):
                 errors.append(f"Record at index {i} must be an object")
                 continue
                 
+            # Check optional proxied field (Cloudflare only)
+            if 'proxied' in record:
+                if not isinstance(record['proxied'], bool):
+                    errors.append(f"Record at index {i}: 'proxied' field must be a boolean (true/false)")
+                
             # Check if it's an MX record with the new format
             if record.get('type', '').upper() == 'MX' and 'mx_records' in record:
                 if not isinstance(record['mx_records'], list):

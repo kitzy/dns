@@ -83,6 +83,7 @@ locals {
         values = upper(r.type) == "MX" && can(r.mx_records) ? [
           for mx in r.mx_records : "${mx.priority} ${mx.value}"
         ] : r.values
+        proxied = try(r.proxied, false) # Default to DNS only (false) if not specified
       } if upper(r.type) != "NS" && upper(r.type) != "SOA"
     ]
   ])
@@ -101,6 +102,7 @@ locals {
           ttl       = record.ttl
           content   = upper(record.type) == "MX" ? split(" ", value)[1] : (upper(record.type) == "TXT" ? "\"${value}\"" : value)
           priority  = upper(record.type) == "MX" ? tonumber(split(" ", value)[0]) : null
+          proxied   = record.proxied
           key       = "${record.zone_name}_${record.name}_${record.type}_${value_idx}"
         }
       ]
@@ -175,4 +177,5 @@ resource "cloudflare_record" "this" {
   ttl      = each.value.ttl
   content  = each.value.content
   priority = each.value.priority
+  proxied  = each.value.proxied
 }

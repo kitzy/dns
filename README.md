@@ -106,11 +106,13 @@ Each entry under `records:` supports the following keys:
 | `type` | yes | DNS record type (e.g. `A`, `CNAME`) |
 | `ttl` | yes | Time to live in seconds |
 | `values` | yes | List of record values |
+| `proxied` | no | Enable Cloudflare proxy (orange cloud). Defaults to `false` (DNS only). Only applicable for Cloudflare zones. |
 | `set_identifier` | no | Identifier for routing policies (Route53 only) |
 | `routing_policy` | no | Object describing a routing policy (Route53 only) |
 
 When `routing_policy` is omitted, records use **simple** routing. Routing policies are only supported for Route53 zones. Supported policy types are `weighted`, `latency`, `geolocation`, `failover`, and `multivalue`. See the example below for usage.
 
+**Route53 routing policy example:**
 ```yaml
 records:
   - name: "www"
@@ -130,6 +132,30 @@ records:
       type: weighted
       weight: 50
 ```
+
+**Cloudflare proxy example:**
+```yaml
+zone_name: "example.com"
+provider: cloudflare
+records:
+  - name: "example.com"
+    type: A
+    ttl: 300
+    values: ["192.0.2.1"]
+    proxied: true  # Enable Cloudflare proxy (orange cloud)
+  - name: "www"
+    type: CNAME
+    ttl: 300
+    values: ["example.com"]
+    proxied: true
+  - name: "direct"
+    type: A
+    ttl: 300
+    values: ["192.0.2.2"]
+    # proxied field omitted - defaults to false (DNS only)
+```
+
+> **Note on Cloudflare Proxy:** The `proxied` field enables Cloudflare's proxy (orange cloud icon), which provides DDoS protection, CDN, and SSL/TLS. Only certain record types can be proxied (A, AAAA, CNAME). Other record types like MX, TXT, NS, and SRV must have `proxied: false` or omit the field. When `proxied: true`, the TTL is controlled by Cloudflare and the specified TTL value is ignored.
 
 ## Terraform Cloud and AWS configuration
 
