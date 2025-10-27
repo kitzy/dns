@@ -30,6 +30,8 @@
 
 * **Pull requests** – Separate checks run for validation and planning. The validation job runs:
   - Zone configuration validation (checks provider/providers field and structure)
+  - Validates that `proxied: true` is only used with supported record types (A, AAAA, CNAME)
+  - Warns (non-blocking) if `proxied` field is used on non-Cloudflare zones
   - [`yamllint`](https://yamllint.readthedocs.io) for YAML syntax
   - `terraform fmt -check` for Terraform formatting
   
@@ -155,7 +157,7 @@ records:
     # proxied field omitted - defaults to false (DNS only)
 ```
 
-> **Note on Cloudflare Proxy:** The `proxied` field enables Cloudflare's proxy (orange cloud icon), which provides DDoS protection, CDN, and SSL/TLS. Only certain record types can be proxied (A, AAAA, CNAME). Other record types like MX, TXT, NS, and SRV must have `proxied: false` or omit the field. When `proxied: true`, the TTL is controlled by Cloudflare and the specified TTL value is ignored.
+> **Note on Cloudflare Proxy:** The `proxied` field enables Cloudflare's proxy (orange cloud icon), which provides DDoS protection, CDN, and SSL/TLS. Only certain record types can be proxied (A, AAAA, CNAME). Other record types like MX, TXT, NS, and SRV must have `proxied: false` or omit the field. **The validation script will fail if you try to set `proxied: true` on unsupported record types.** When `proxied: true`, **the TTL value in your YAML file is automatically ignored and set to 1** (per Cloudflare's API requirement). You can specify any TTL value in the YAML for consistency, but Terraform will override it to 1 for proxied records.
 
 ## Terraform Cloud and AWS configuration
 

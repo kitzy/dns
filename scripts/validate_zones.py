@@ -6,6 +6,7 @@ This script checks that:
 1. Each zone file has a valid 'provider' field
 2. The provider is one of the supported values: 'route53' or 'cloudflare'
 3. The zone_name field is present and matches the filename
+4. Proxied records only use supported record types
 """
 
 import sys
@@ -16,23 +17,27 @@ from pathlib import Path
 # Supported DNS providers
 SUPPORTED_PROVIDERS = frozenset(['route53', 'cloudflare'])
 
+# Record types that can be proxied through Cloudflare
+PROXIABLE_RECORD_TYPES = frozenset(['A', 'AAAA', 'CNAME'])
+
 def validate_zone_file(file_path):
     """Validate a single zone file."""
     errors = []
+    warnings = []
     
     try:
         with open(file_path, 'r') as f:
             data = yaml.safe_load(f)
     except yaml.YAMLError as e:
         errors.append(f"YAML parsing error: {e}")
-        return errors
+        return errors, warnings
     except Exception as e:
         errors.append(f"Error reading file: {e}")
-        return errors
+        return errors, warnings
     
     if not isinstance(data, dict):
         errors.append("Zone file must contain a YAML object")
-        return errors
+        return errors, warnings
     
     # Check zone_name field
     if 'zone_name' not in data:
@@ -47,6 +52,13 @@ def validate_zone_file(file_path):
     # Check provider field(s) - support both single and multi-provider formats
     has_provider = 'provider' in data
     has_providers = 'providers' in data
+    
+    # Determine if zone uses Cloudflare
+    uses_cloudflare = False
+    if has_provider and isinstance(data.get('provider'), str):
+        uses_cloudflare = data['provider'] == 'cloudflare'
+    elif has_providers and isinstance(data.get('providers'), list):
+        uses_cloudflare = 'cloudflare' in data['providers']
     
     if not has_provider and not has_providers:
         errors.append("Missing required field: either 'provider' or 'providers'")
@@ -88,14 +100,31 @@ def validate_zone_file(file_path):
             if not isinstance(record, dict):
                 errors.append(f"Record at index {i} must be an object")
                 continue
+            
+            record_type = record.get('type', '').upper()
+            record_name = record.get('name', '<unnamed>')
                 
             # Check optional proxied field (Cloudflare only)
             if 'proxied' in record:
                 if not isinstance(record['proxied'], bool):
-                    errors.append(f"Record at index {i}: 'proxied' field must be a boolean (true/false)")
+                    errors.append(f"Record at index {i} ({record_name}, {record_type}): 'proxied' field must be a boolean (true/false)")
+                else:
+                    # Warn if proxied is used on non-Cloudflare zones
+                    if not uses_cloudflare:
+                        warnings.append(
+                            f"Record at index {i} ({record_name}, {record_type}): 'proxied' field is set but this zone does not use Cloudflare as a provider. "
+                            f"The 'proxied' field only applies to Cloudflare zones and will be ignored by other providers."
+                        )
+                    # Check if this record type can be proxied (only error for Cloudflare zones)
+                    elif record['proxied'] is True and record_type not in PROXIABLE_RECORD_TYPES:
+                        errors.append(
+                            f"Record at index {i} ({record_name}, {record_type}): Cannot set 'proxied: true' for {record_type} records. "
+                            f"Only {', '.join(sorted(PROXIABLE_RECORD_TYPES))} records can be proxied through Cloudflare. "
+                            f"Remove the 'proxied' field or set it to 'false'."
+                        )
                 
             # Check if it's an MX record with the new format
-            if record.get('type', '').upper() == 'MX' and 'mx_records' in record:
+            if record_type == 'MX' and 'mx_records' in record:
                 if not isinstance(record['mx_records'], list):
                     errors.append(f"MX record at index {i}: mx_records must be a list")
                 else:
@@ -112,7 +141,7 @@ def validate_zone_file(file_path):
                         elif not isinstance(mx['value'], str):
                             errors.append(f"MX record at index {i}, mx_records[{j}] value must be a string")
     
-    return errors
+    return errors, warnings
 
 def main():
     """Main validation function."""
@@ -132,23 +161,35 @@ def main():
         sys.exit(0)
     
     total_errors = 0
+    total_warnings = 0
     
     for zone_file in sorted(zone_files):
-        errors = validate_zone_file(zone_file)
+        errors, warnings = validate_zone_file(zone_file)
         
         if errors:
             print(f"\n❌ {zone_file.name}:")
             for error in errors:
                 print(f"  - {error}")
             total_errors += len(errors)
+        elif warnings:
+            print(f"\n⚠️  {zone_file.name}:")
+            for warning in warnings:
+                print(f"  - {warning}")
+            total_warnings += len(warnings)
         else:
             print(f"✅ {zone_file.name}")
     
     if total_errors > 0:
         print(f"\n❌ Validation failed with {total_errors} error(s)")
+        if total_warnings > 0:
+            print(f"⚠️  {total_warnings} warning(s) found (non-blocking)")
         sys.exit(1)
     else:
-        print(f"\n✅ All {len(zone_files)} zone files are valid")
+        if total_warnings > 0:
+            print(f"\n✅ All {len(zone_files)} zone files are valid")
+            print(f"⚠️  {total_warnings} warning(s) found (non-blocking)")
+        else:
+            print(f"\n✅ All {len(zone_files)} zone files are valid")
         sys.exit(0)
 
 if __name__ == "__main__":
