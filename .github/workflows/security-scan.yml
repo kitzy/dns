@@ -1,4 +1,4 @@
-name: Weekly DNS Security Scan
+name: DNS Security Scan
 
 on:
   schedule:
