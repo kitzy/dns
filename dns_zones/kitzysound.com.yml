@@ -51,11 +51,6 @@ records:
     ttl: 300
     values:
       - "v=DMARC1; p=quarantine; pct=5; rua=mailto:postmaster@kitzysound.com"
-  - name: "kdu4b3bf2yvj"
-    type: "CNAME"
-    ttl: 900
-    values:
-      - "gv-7l3jfpbxnyec54.dv.googlehosted.com"
   - name: "smtp._domainkey"
     type: "TXT"
     ttl: 900
