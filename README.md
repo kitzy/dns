@@ -38,7 +38,7 @@
   The plan job runs `terraform init`, `terraform validate`, and `terraform plan` to show proposed changes.
 * **Merge to `main`** – Another workflow runs `terraform apply` to create, update, or remove DNS zones and records so they match the files in this repo. Zones removed from the repository are deleted from the configured provider (Route53 or Cloudflare).
 * NS and SOA records are never managed and remain untouched in existing zones.
-* **Nightly cleanup** – A scheduled workflow (also runnable manually) deletes any DNS records not defined in `dns_zones/` to revert manual changes. Route53 represents wildcard names as \052; zone files should use a quoted `*`, and the cleanup script normalizes this internally. Note: Currently only supports Route53 cleanup.
+* **Nightly cleanup** – A scheduled workflow (also runnable manually) deletes any DNS records not defined in `dns_zones/` to revert manual changes. The cleanup scripts only process zones that have corresponding YAML files in the repository; any zones in Route53 or Cloudflare that aren't defined in the repo are completely ignored and left untouched. Route53 represents wildcard names as \052; zone files should use a quoted `*`, and the cleanup script normalizes this internally.
 
 ## Provider Selection
 
@@ -208,4 +208,4 @@ These commands match the CI checks.
   - Route53 zones: AWS credentials with Route53 permissions
   - Cloudflare zones: Cloudflare API token with Zone:Edit permissions
 * Routing policies (weighted, latency, etc.) are only supported for Route53 zones.
-* The cleanup script currently only supports Route53 zones.
+* The cleanup scripts only process zones defined in `dns_zones/` with the appropriate provider configuration. Any zones in Route53 or Cloudflare that don't have corresponding YAML files in the repository are completely ignored.
