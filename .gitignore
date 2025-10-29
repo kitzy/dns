@@ -1,3 +1,6 @@
 .terraform/
 terraform.tfstate
 terraform.tfstate.*
+
+# Security scan reports
+security-report.json

@@ -1,0 +1,10 @@
+# DNS Management Script Dependencies
+
+# YAML parsing for zone files
+pyyaml>=6.0
+
+# DNS resolution and security scanning
+dnspython>=2.4.0
+
+# YAML linting
+yamllint>=1.30.0
