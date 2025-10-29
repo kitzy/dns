@@ -26,16 +26,6 @@ records:
     type: A
     values:
       - "100.34.107.82"
-  - name: lakehouse
-    ttl: 60
-    type: A
-    values:
-      - "70.15.246.42"
-  - name: vault
-    ttl: 300
-    type: CNAME
-    values:
-      - "lakehouse.kitzy.io."
   - name: "*"
     ttl: 300
     type: A
