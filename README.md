@@ -1,5 +1,18 @@
 # DNS Zone Management with Terraform
 
+This repository manages DNS hosted zones using Terraform with support for both AWS Route53 and Cloudflare providers. Zone definitions live in [`dns_zones/`](dns_zones) as YAML files, and the Terraform configuration resides in [`terraform/`](terraform).
+
+## 🔒 Security Scanning
+
+This repository includes **automated weekly security scans** to detect DNS vulnerabilities:
+- 🚨 **Subdomain takeover detection** - Identifies CNAMEs pointing to unclaimed cloud services
+- 🔗 **Broken CNAME detection** - Finds CNAMEs pointing to non-existent domains
+- 🔍 **Dangling DNS records** - Detects records pointing to decommissioned resources
+
+Scans run every Monday at 9 AM UTC and on pull requests affecting DNS zones. Critical issues automatically create GitHub issues for review.
+
+👉 **[Learn more about DNS Security Scanning](SECURITY_SCANNING.md)**
+
 ## Terraform Cloud and Provider Configuration
 
 1. Sign in to [Terraform Cloud](https://app.terraform.io/) and create an organization.
@@ -180,10 +193,13 @@ records:
 
 ```bash
 # Install dependencies (one time)
-pip install yamllint pyyaml
+pip install yamllint pyyaml dnspython
 
 # Validate zone configuration
 python3 scripts/validate_zones.py
+
+# Run security scan
+python3 scripts/security_scan.py --verbose
 
 # Lint YAML files
 yamllint dns_zones

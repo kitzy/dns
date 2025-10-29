@@ -1,0 +1,209 @@
+name: Weekly DNS Security Scan
+
+on:
+  schedule:
+    # Run every Monday at 9:00 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch: # Allow manual triggering
+  pull_request:
+    paths:
+      - 'dns_zones/**'
+      - 'scripts/security_scan.py'
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write # Allow creating issues if vulnerabilities are found
+      contents: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install pyyaml dnspython
+      
+      - name: Run security scan
+        id: scan
+        run: |
+          python3 scripts/security_scan.py --verbose --output security-report.json
+        continue-on-error: true
+      
+      - name: Upload security report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: security-report.json
+          retention-days: 90
+      
+      - name: Check for critical/high severity issues
+        id: check_issues
+        run: |
+          if [ -f security-report.json ]; then
+            CRITICAL=$(jq '[.issues[] | select(.severity == "critical")] | length' security-report.json)
+            HIGH=$(jq '[.issues[] | select(.severity == "high")] | length' security-report.json)
+            MEDIUM=$(jq '[.issues[] | select(.severity == "medium")] | length' security-report.json)
+            LOW=$(jq '[.issues[] | select(.severity == "low")] | length' security-report.json)
+            TOTAL=$(jq '.total_issues' security-report.json)
+            
+            echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+            echo "high=$HIGH" >> $GITHUB_OUTPUT
+            echo "medium=$MEDIUM" >> $GITHUB_OUTPUT
+            echo "low=$LOW" >> $GITHUB_OUTPUT
+            echo "total=$TOTAL" >> $GITHUB_OUTPUT
+            
+            if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+              echo "has_serious_issues=true" >> $GITHUB_OUTPUT
+            else
+              echo "has_serious_issues=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "total=0" >> $GITHUB_OUTPUT
+            echo "has_serious_issues=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create issue for vulnerabilities
+        if: steps.check_issues.outputs.has_serious_issues == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('security-report.json', 'utf8'));
+            
+            // Group issues by severity
+            const critical = report.issues.filter(i => i.severity === 'critical');
+            const high = report.issues.filter(i => i.severity === 'high');
+            const medium = report.issues.filter(i => i.severity === 'medium');
+            const low = report.issues.filter(i => i.severity === 'low');
+            
+            // Build issue body
+            let body = '## 🚨 DNS Security Scan Found Vulnerabilities\n\n';
+            body += `**Scan Date:** ${report.scan_date}\n`;
+            body += `**Total Issues:** ${report.total_issues}\n\n`;
+            body += '### Summary\n\n';
+            body += `- 🔴 Critical: ${critical.length}\n`;
+            body += `- 🟠 High: ${high.length}\n`;
+            body += `- 🟡 Medium: ${medium.length}\n`;
+            body += `- 🟢 Low: ${low.length}\n\n`;
+            
+            // Add critical issues
+            if (critical.length > 0) {
+              body += '### 🔴 Critical Severity Issues\n\n';
+              critical.forEach((issue, idx) => {
+                body += `#### ${idx + 1}. ${issue.zone} - ${issue.record_name}\n\n`;
+                body += `- **Type:** ${issue.record_type}\n`;
+                body += `- **Value:** \`${issue.record_value}\`\n`;
+                body += `- **Issue:** ${issue.issue_type}\n`;
+                body += `- **Description:** ${issue.description}\n`;
+                body += `- **Remediation:** ${issue.remediation}\n\n`;
+              });
+            }
+            
+            // Add high severity issues
+            if (high.length > 0) {
+              body += '### 🟠 High Severity Issues\n\n';
+              high.forEach((issue, idx) => {
+                body += `#### ${idx + 1}. ${issue.zone} - ${issue.record_name}\n\n`;
+                body += `- **Type:** ${issue.record_type}\n`;
+                body += `- **Value:** \`${issue.record_value}\`\n`;
+                body += `- **Issue:** ${issue.issue_type}\n`;
+                body += `- **Description:** ${issue.description}\n`;
+                body += `- **Remediation:** ${issue.remediation}\n\n`;
+              });
+            }
+            
+            body += '\n---\n\n';
+            body += '**Action Required:** Please review and remediate these issues as soon as possible.\n';
+            body += 'Download the full report from the workflow artifacts for more details.\n\n';
+            body += `[View Workflow Run](${context.payload.repository.html_url}/actions/runs/${context.runId})`;
+            
+            // Check if there's already an open issue
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'security,dns-scan',
+              per_page: 100
+            });
+            
+            const existingIssue = issues.data.find(issue => 
+              issue.title.includes('DNS Security Vulnerabilities Detected')
+            );
+            
+            if (existingIssue) {
+              // Update existing issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body: `## Updated Scan Results (${report.scan_date})\n\n${body}`
+              });
+              console.log(`Updated existing issue #${existingIssue.number}`);
+            } else {
+              // Create new issue
+              const newIssue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '🚨 DNS Security Vulnerabilities Detected',
+                body: body,
+                labels: ['security', 'dns-scan', 'high-priority']
+              });
+              console.log(`Created new issue #${newIssue.data.number}`);
+            }
+      
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && steps.check_issues.outputs.total != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('security-report.json', 'utf8'));
+            
+            let comment = '## DNS Security Scan Results\n\n';
+            comment += `Found **${report.total_issues}** potential issue(s):\n\n`;
+            comment += `- 🔴 Critical: ${report.issues.filter(i => i.severity === 'critical').length}\n`;
+            comment += `- 🟠 High: ${report.issues.filter(i => i.severity === 'high').length}\n`;
+            comment += `- 🟡 Medium: ${report.issues.filter(i => i.severity === 'medium').length}\n`;
+            comment += `- 🟢 Low: ${report.issues.filter(i => i.severity === 'low').length}\n\n`;
+            
+            if (report.total_issues > 0) {
+              comment += 'Please review the security scan artifacts for detailed information.';
+            }
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
+      
+      - name: Fail if critical issues found
+        if: steps.check_issues.outputs.critical != '0'
+        run: |
+          echo "::error::Found ${{ steps.check_issues.outputs.critical }} critical security issue(s)"
+          exit 1
+      
+      - name: Summary
+        if: always()
+        run: |
+          echo "## DNS Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.check_issues.outputs.total }}" == "0" ]; then
+            echo "✅ No security issues found!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Found **${{ steps.check_issues.outputs.total }}** issue(s):" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- 🔴 Critical: ${{ steps.check_issues.outputs.critical }}" >> $GITHUB_STEP_SUMMARY
+            echo "- 🟠 High: ${{ steps.check_issues.outputs.high }}" >> $GITHUB_STEP_SUMMARY
+            echo "- 🟡 Medium: ${{ steps.check_issues.outputs.medium }}" >> $GITHUB_STEP_SUMMARY
+            echo "- 🟢 Low: ${{ steps.check_issues.outputs.low }}" >> $GITHUB_STEP_SUMMARY
+          fi
