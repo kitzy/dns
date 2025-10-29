@@ -168,16 +168,64 @@ jobs:
             const fs = require('fs');
             const report = JSON.parse(fs.readFileSync('security-report.json', 'utf8'));
             
+            // Group issues by severity
+            const critical = report.issues.filter(i => i.severity === 'critical');
+            const high = report.issues.filter(i => i.severity === 'high');
+            const medium = report.issues.filter(i => i.severity === 'medium');
+            const low = report.issues.filter(i => i.severity === 'low');
+            
             let comment = '## DNS Security Scan Results\n\n';
             comment += `Found **${report.total_issues}** potential issue(s):\n\n`;
-            comment += `- 🔴 Critical: ${report.issues.filter(i => i.severity === 'critical').length}\n`;
-            comment += `- 🟠 High: ${report.issues.filter(i => i.severity === 'high').length}\n`;
-            comment += `- 🟡 Medium: ${report.issues.filter(i => i.severity === 'medium').length}\n`;
-            comment += `- 🟢 Low: ${report.issues.filter(i => i.severity === 'low').length}\n\n`;
+            comment += `- 🔴 Critical: ${critical.length}\n`;
+            comment += `- 🟠 High: ${high.length}\n`;
+            comment += `- 🟡 Medium: ${medium.length}\n`;
+            comment += `- 🟢 Low: ${low.length}\n\n`;
             
-            if (report.total_issues > 0) {
-              comment += 'Please review the security scan artifacts for detailed information.';
+            // Add critical issues
+            if (critical.length > 0) {
+              comment += '### 🔴 Critical Issues\n\n';
+              critical.forEach((issue, idx) => {
+                comment += `**${idx + 1}. ${issue.zone}** - \`${issue.record_name}\`\n`;
+                comment += `- **Type:** ${issue.record_type} → \`${issue.record_value}\`\n`;
+                comment += `- **Issue:** ${issue.description}\n`;
+                comment += `- **Fix:** ${issue.remediation}\n\n`;
+              });
             }
+            
+            // Add high severity issues
+            if (high.length > 0) {
+              comment += '### 🟠 High Severity Issues\n\n';
+              high.forEach((issue, idx) => {
+                comment += `**${idx + 1}. ${issue.zone}** - \`${issue.record_name}\`\n`;
+                comment += `- **Type:** ${issue.record_type} → \`${issue.record_value}\`\n`;
+                comment += `- **Issue:** ${issue.description}\n`;
+                comment += `- **Fix:** ${issue.remediation}\n\n`;
+              });
+            }
+            
+            // Add medium severity issues
+            if (medium.length > 0) {
+              comment += '### 🟡 Medium Severity Issues\n\n';
+              medium.forEach((issue, idx) => {
+                comment += `**${idx + 1}. ${issue.zone}** - \`${issue.record_name}\`\n`;
+                comment += `- **Type:** ${issue.record_type} → \`${issue.record_value}\`\n`;
+                comment += `- **Issue:** ${issue.description}\n`;
+                comment += `- **Fix:** ${issue.remediation}\n\n`;
+              });
+            }
+            
+            // Add low severity issues
+            if (low.length > 0) {
+              comment += '### 🟢 Low Severity Issues\n\n';
+              low.forEach((issue, idx) => {
+                comment += `**${idx + 1}. ${issue.zone}** - \`${issue.record_name}\`\n`;
+                comment += `- **Type:** ${issue.record_type} → \`${issue.record_value}\`\n`;
+                comment += `- **Issue:** ${issue.description}\n`;
+                comment += `- **Fix:** ${issue.remediation}\n\n`;
+              });
+            }
+            
+            comment += '\n---\n📄 Download the full report from the workflow artifacts for more details.';
             
             await github.rest.issues.createComment({
               owner: context.repo.owner,
