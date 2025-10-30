@@ -52,7 +52,7 @@ records:
     values:
       - "_globalsign-domain-verification=B57sRQpmte4G4w-gavZbVNmmNsMxGp5kcL19UP2599"
       - "google-site-verification=vlbZlHUuYGfM3qjoCDO96Gi5r-4V4gSexFiZjiUSjrk"
-      - "keybase-site-verification=CDqQz5tsuVzQPMGfBTs0GdhQ6nNpftBiTFCrdp8W8WU"
+      - "keybase-site-verification=wb65nQlCdl-mt7FS2O1j99Bg7xjSin2w38ReG4yadd8"
       - "1password-site-verification=HSN54OJGRJBAZJUMABNQ72IHSY"
       - "v=spf1 include:_spf.google.com ~all"
   - name: "google._domainkey"
