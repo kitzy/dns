@@ -5,10 +5,7 @@ on:
     # Run every Monday at 9:00 AM UTC
     - cron: '0 9 * * 1'
   workflow_dispatch: # Allow manual triggering
-  pull_request:
-    paths:
-      - 'dns_zones/**'
-      - 'scripts/security_scan.py'
+  pull_request: # Run on all PRs, not just when specific paths change
 
 jobs:
   security-scan:
@@ -235,7 +232,7 @@ jobs:
             });
       
       - name: Fail if critical issues found
-        if: steps.check_issues.outputs.critical != '0'
+        if: steps.check_issues.outputs.critical != '0' && github.event_name != 'pull_request'
         run: |
           echo "::error::Found ${{ steps.check_issues.outputs.critical }} critical security issue(s)"
           exit 1
