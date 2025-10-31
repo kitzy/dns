@@ -152,7 +152,7 @@ def main():
         
         # Check each existing record
         for record in existing_records:
-            rtype = record["type"]
+            rtype = record["type"].upper()
             
             # Skip NS and SOA records (managed by Cloudflare)
             if rtype in ("NS", "SOA"):
