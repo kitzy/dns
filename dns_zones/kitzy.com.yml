@@ -10,7 +10,7 @@ records:
       - "185.199.109.153"
       - "185.199.110.153"
       - "185.199.111.153"
-    proxied: true
+    proxied: false
   - name: "kitzy.com"
     type: "AAAA"
     ttl: 1
@@ -19,19 +19,19 @@ records:
       - "2606:50c0:8001::153"
       - "2606:50c0:8002::153"
       - "2606:50c0:8003::153"
-    proxied: true
+    proxied: false
   - name: "www"
     ttl: 1
     type: CNAME
     values:
       - "kitzy.github.io"
-    proxied: true
+    proxied: false
   - name: "*"
     ttl: 1
     type: CNAME
     values:
       - "kitzy.github.io"
-    proxied: true
+    proxied: false
   - name: "kitzy.com"
     type: "MX"
     ttl: 300
