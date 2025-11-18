@@ -7,6 +7,11 @@ records:
     mx_records:
       - priority: 1
         value: "smtp.google.com"
+  - name: "gateway"
+    ttl: 300
+    type: A
+    values:
+      - "100.34.107.82"
   - name: "status"
     ttl: 300
     type: CNAME
