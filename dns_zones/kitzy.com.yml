@@ -28,9 +28,9 @@ records:
     proxied: true
   - name: "*"
     ttl: 1
-    type: CNAME
+    type: A
     values:
-      - "kitzy.github.io"
+      - "100.34.107.84"
     proxied: true
   - name: "kitzy.com"
     type: "MX"
