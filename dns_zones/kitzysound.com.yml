@@ -44,7 +44,7 @@ records:
     type: "TXT"
     ttl: 300
     values:
-      - "v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCd+WJKhzXXmargV+GZ8ZzC1poQ+AwWAV2JzkrmpdEpsFiYE3W+AkhcW/WewwlcBJDL08N/UizVldRhAJHM/9iFcj8ZcRqjAoRhIDnpqMyT63qTOM03mO5Yhdu1OJbdoSYFgvgLgA3ertpgC/7WE/8lbDRypsQkK5MoW3mInTch7QIDAQAB"
+      - "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1jPjIgunfeJVyCoxnr+RsR9xINGp3RbcNWmn28Cht5laBJtjQ16tOTmjqpCygHCd3oYTN9yecBqyUVxPAxY4vyCMvbQ4hlVUzTLBd4eE2HWnXJCIe3mHY1/bq6UhSXCZKBqahakwwnBIgITm4QiN+RwfyX4D6magyyzBOdZDozR5i5I4DcLucxCh83u6SbtszR476DRZEDNG/+ADmIv7gm9RR2CHnc2uhLFfyCs/0Hi87KK2CqpAJ/6/3frZbm+sIrYVg53ZuAxCl+9A4YGePIita/ueXnoiInBgSiIwvQU5ymyA9w4kF2kDGJFpmeNupQ7sUEbGdBxnHcWh+udTiwIDAQAB"
   - name: "_dmarc"
     type: "TXT"
     ttl: 300
