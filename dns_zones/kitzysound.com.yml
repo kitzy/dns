@@ -1,5 +1,7 @@
 zone_name: "kitzysound.com"
-provider: route53
+providers: 
+  - route53
+  - cloudflare
 records:
   - name: "kitzysound.com"
     type: "A"
