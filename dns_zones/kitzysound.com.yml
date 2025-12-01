@@ -1,5 +1,5 @@
 zone_name: "kitzysound.com"
-providers: 
+providers:
   - route53
   - cloudflare
 records:
