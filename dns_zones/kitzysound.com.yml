@@ -20,13 +20,13 @@ records:
     proxied: false
   - name: "47t3gdz7nppxyrwxz5sp"
     type: "CNAME"
-    ttl: 900
+    ttl: 300
     values:
       - "verify.squarespace.com"
     proxied: false
   - name: "kitzysound.com"
     type: "MX"
-    ttl: 900
+    ttl: 300
     mx_records:
       - priority: 1
         value: "aspmx.l.google.com"
@@ -40,7 +40,7 @@ records:
         value: "alt4.aspmx.l.google.com"
   - name: "kitzysound.com"
     type: "TXT"
-    ttl: 900
+    ttl: 300
     values:
       - "google-site-verification=Qp_gbp4WW61V9QXwCWq9RfDcm2iPdPTG9M9JH98hOaY"
       - "1password-site-verification=6642JJOABJC2FGBMEAMCHYPZGU"
@@ -57,6 +57,6 @@ records:
       - "v=DMARC1; p=none; pct=5; adkim=r; aspf=r; rua=mailto:5a1dfadfa39146b58b50746b8cd1b448@dmarc-reports.cloudflare.net"
   - name: "smtp._domainkey"
     type: "TXT"
-    ttl: 900
+    ttl: 300
     values:
       - "k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDotX3ARWVrMjEl3ww6CfC8vOdmPDL3DbaOywLSNiyMAeFtwvUqmV0YZ/9fCgJodtrNNoFKOKK7s6uQm37Qh43X1pSBg5LPVdITPhUqa/fIKGMlnpCfVFdnUlwe24F/O/Y+xATx7CzxUPgKpWU2TddsEESLm2anH6isZ0M0XRtJ8wIDAQAB"
