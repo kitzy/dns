@@ -11,16 +11,19 @@ records:
       - "198.185.159.145"
       - "198.49.23.144"
       - "198.49.23.145"
+    proxied: false
   - name: "www"
     type: "CNAME"
     ttl: 300
     values:
       - "ext-cust.squarespace.com"
+    proxied: false
   - name: "47t3gdz7nppxyrwxz5sp"
     type: "CNAME"
     ttl: 900
     values:
       - "verify.squarespace.com"
+    proxied: false
   - name: "kitzysound.com"
     type: "MX"
     ttl: 900
