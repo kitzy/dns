@@ -65,7 +65,7 @@ records:
     type: "TXT"
     ttl: 300
     values:
-      - "v=DMARC1; p=quarantine; pct=50; adkim=r, aspf=r, rua=mailto:5a598a6ab9084fc4be981dffbcf71d2d@dmarc-reports.cloudflare.net"
+      - "v=DMARC1; p=reject; pct=50; adkim=r, aspf=r, rua=mailto:5a598a6ab9084fc4be981dffbcf71d2d@dmarc-reports.cloudflare.net"
   - name: "_atproto"
     type: "TXT"
     ttl: 300
