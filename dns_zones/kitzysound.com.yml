@@ -54,7 +54,7 @@ records:
     type: "TXT"
     ttl: 300
     values:
-      - "v=DMARC1; p=none; pct=5; adkim=r; aspf=r; rua=mailto:5a1dfadfa39146b58b50746b8cd1b448@dmarc-reports.cloudflare.net"
+      - "v=DMARC1; p=reject; pct=50; adkim=r; aspf=r; rua=mailto:5a1dfadfa39146b58b50746b8cd1b448@dmarc-reports.cloudflare.net"
   - name: "smtp._domainkey"
     type: "TXT"
     ttl: 300
