@@ -2,7 +2,6 @@ zone_name: "leftofthedial.fm"
 providers:
   - route53
   - cloudflare
-
 records:
   - name: "*"
     ttl: 300

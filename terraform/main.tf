@@ -55,6 +55,17 @@ locals {
     for zname, z in local.zones :
     zname => z if contains(local.zone_providers[zname], "cloudflare")
   }
+
+  # Separate Route53 zones into those with custom nameservers and those without
+  route53_zones_with_custom_ns = {
+    for zname, z in local.route53_zones :
+    zname => z if can(z.nameservers) && length(z.nameservers) > 0
+  }
+
+  route53_zones_with_default_ns = {
+    for zname, z in local.route53_zones :
+    zname => z if !can(z.nameservers) || length(z.nameservers) == 0
+  }
   # Route53 records
   route53_records = flatten([
     for zname, z in local.route53_zones : [
@@ -110,17 +121,37 @@ locals {
   }
 }
 
+# AWS Route53 Zones with default AWS nameservers
 resource "aws_route53_zone" "this" {
-  for_each      = local.route53_zones
+  for_each      = local.route53_zones_with_default_ns
   name          = each.value.zone_name
   comment       = "Managed by Terraform"
   force_destroy = true
 }
 
+# AWS Route53 Zones with custom nameservers (delegation sets)
+resource "aws_route53_zone" "custom_ns" {
+  for_each      = local.route53_zones_with_custom_ns
+  name          = each.value.zone_name
+  comment       = "Managed by Terraform - Custom nameservers"
+  force_destroy = true
+
+  # Note: AWS Route53 doesn't support setting custom nameservers directly on a hosted zone.
+  # The nameservers field in the zone file should be used to update the domain registrar's
+  # nameserver settings to point to these values. The zone will use AWS-assigned nameservers.
+
+  lifecycle {
+    # The nameservers specified in the zone file are for the domain registrar,
+    # not for the Route53 hosted zone itself
+    ignore_changes = []
+  }
+}
+
 resource "aws_route53_record" "this" {
   for_each = local.route53_record_map
 
-  zone_id        = aws_route53_zone.this[each.value.zone_name].zone_id
+  # Use the correct zone_id based on whether custom nameservers are configured
+  zone_id        = contains(keys(local.route53_zones_with_custom_ns), each.value.zone_name) ? aws_route53_zone.custom_ns[each.value.zone_name].zone_id : aws_route53_zone.this[each.value.zone_name].zone_id
   name           = each.value.name == each.value.zone_name ? each.value.name : "${each.value.name}.${each.value.zone_name}"
   type           = each.value.type
   ttl            = each.value.ttl
@@ -178,4 +209,36 @@ resource "cloudflare_record" "this" {
   content  = each.value.content
   priority = each.value.priority
   proxied  = each.value.proxied
+}
+# Output nameservers for Route53 zones
+output "route53_nameservers" {
+  description = "Route53 zone nameservers (AWS-assigned)"
+  value = merge(
+    {
+      for zname, zone in aws_route53_zone.this :
+      zname => zone.name_servers
+    },
+    {
+      for zname, zone in aws_route53_zone.custom_ns :
+      zname => zone.name_servers
+    }
+  )
+}
+
+# Output custom nameservers specified in zone files
+output "custom_nameservers_configured" {
+  description = "Custom nameservers specified in zone files (to be used at domain registrar)"
+  value = {
+    for zname, z in local.route53_zones_with_custom_ns :
+    zname => z.nameservers
+  }
+}
+
+# Output Cloudflare nameservers
+output "cloudflare_nameservers" {
+  description = "Cloudflare zone nameservers"
+  value = {
+    for zname, zone in cloudflare_zone.this :
+    zname => zone.name_servers
+  }
 }

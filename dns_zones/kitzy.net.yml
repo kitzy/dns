@@ -2,6 +2,9 @@ zone_name: "kitzy.net"
 providers:
   - route53
   - cloudflare
+nameservers:
+  - "achiel.ns.cloudflare.com"
+  - "ullis.ns.cloudflare.com"
 records:
   - name: "kitzy.net"
     ttl: 300
