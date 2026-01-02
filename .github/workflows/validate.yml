@@ -19,6 +19,7 @@ jobs:
               - '**/*.yaml'
             zones:
               - 'dns_zones/*.yml'
+              - 'cloudflare_tunnels.yml'
             terraform:
               - '**/*.tf'
       - uses: actions/setup-python@v5
@@ -69,6 +70,7 @@ jobs:
               - '**/*.tf'
             zones:
               - 'dns_zones/*.yml'
+              - 'cloudflare_tunnels.yml'
       - name: Setup Terraform
         if: steps.changes.outputs.terraform == 'true' || steps.changes.outputs.zones == 'true'
         uses: hashicorp/setup-terraform@v2
