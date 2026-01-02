@@ -1,5 +1,7 @@
 zone_name: "kitzy.net"
-provider: route53
+providers:
+  - route53
+  - cloudflare
 records:
   - name: "kitzy.net"
     ttl: 300
