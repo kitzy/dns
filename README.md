@@ -89,6 +89,171 @@ The multi-provider format enables **zero-downtime migrations**:
 
 ⚠️ **Important**: Either `provider` or `providers` field is **required**. You cannot specify both.
 
+## 🚇 Cloudflare Tunnels
+
+Cloudflare Tunnels allow you to securely expose internal services (like Kubernetes clusters, private servers, or localhost) to the internet without opening inbound ports. This repository supports managing tunnel DNS records and routing configurations directly in your zone files.
+
+### Prerequisites
+
+1. **Create a tunnel** in Cloudflare (via `cloudflared` CLI or Zero Trust dashboard)
+2. **Get the tunnel ID** from Cloudflare (visible in the Zero Trust dashboard or CLI output)
+3. **Run the tunnel connector** on your server/cluster to establish the connection
+
+### Tunnel Definitions
+
+All tunnels are defined centrally in [`cloudflare_tunnels.yml`](cloudflare_tunnels.yml) at the repository root. This allows you to reference the same tunnel across multiple DNS zones.
+
+**cloudflare_tunnels.yml:**
+```yaml
+tunnels:
+  homelab-k3s:
+    tunnel_id: "a80b484c-d2e9-484b-bf01-ba385ee9be7e"
+    description: "Homelab Kubernetes cluster tunnel"
+  
+  office-server:
+    tunnel_id: "xyz789abc-1234-5678-90ab-cdef12345678"
+    description: "Office network tunnel"
+```
+
+### Using Tunnels in Zone Files
+
+Reference defined tunnels in your DNS zone files using TUNNEL records:
+
+```yaml
+zone_name: "example.com"
+provider: cloudflare
+
+records:
+  # Regular DNS records...
+  
+  # Tunnel record - routes subdomain to internal service
+  - name: "app"
+    type: TUNNEL
+    ttl: 300
+    tunnel:
+      name: "homelab-k3s"  # References tunnel from cloudflare_tunnels.yml
+      service: "http://myapp.default.svc.cluster.local:8080"
+```
+
+### Zone-Specific Tunnel Overrides (Optional)
+
+You can also define tunnels directly in zone files if needed. Zone-specific definitions take precedence over global ones:
+
+```yaml
+zone_name: "example.com"
+provider: cloudflare
+
+# Optional: Override or add zone-specific tunnels
+tunnels:
+  special-tunnel:
+    tunnel_id: "zone-specific-tunnel-id"
+
+records:
+  - name: "special"
+    type: TUNNEL
+    ttl: 300
+    tunnel:
+      name: "special-tunnel"
+      service: "http://special-service:80"
+```
+
+### Supported Service Protocols
+
+The `service` field supports various protocols:
+
+- **HTTP/HTTPS**: `http://internal-service:80`, `https://internal-service:443`
+- **TCP**: `tcp://database-server:5432`
+- **SSH**: `ssh://internal-host:22`
+- **RDP**: `rdp://windows-server:3389`
+- **Unix sockets**: `unix:/path/to/socket`, `unix+tls:/path/to/socket`
+
+### How It Works
+
+When you define a TUNNEL record, Terraform automatically:
+
+1. **Creates a CNAME record** pointing to `<tunnel-id>.cfargotunnel.com`
+2. **Configures tunnel routing** to map the hostname to your internal service
+3. **Enables Cloudflare proxy** (always proxied for tunnels)
+
+The CNAME record allows DNS resolution to find the tunnel, while the tunnel configuration tells Cloudflare where to route traffic.
+
+### Multiple Services on One Tunnel
+
+You can route multiple hostnames through the same tunnel across different zones:
+
+**kitzy.net zone:**
+```yaml
+records:
+  - name: "grafana"
+    type: TUNNEL
+    tunnel:
+      name: "homelab-k3s"
+      service: "http://grafana.monitoring.svc:3000"
+```
+
+**kitzy.com zone:**
+```yaml
+records:
+  - name: "nextcloud"
+    type: TUNNEL
+    tunnel:
+      name: "homelab-k3s"  # Same tunnel, different zone
+      service: "http://nextcloud.default.svc:80"
+```
+
+### Tunnel Setup Steps
+
+1. **Install cloudflared** on your server/cluster
+   ```bash
+   # Example for Linux
+   wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+   sudo mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
+   sudo chmod +x /usr/local/bin/cloudflared
+   ```
+
+2. **Authenticate and create tunnel**
+   ```bash
+   cloudflared tunnel login
+   cloudflared tunnel create my-tunnel-name
+   # Note the tunnel ID from the output
+   ```
+
+3. **Add tunnel to cloudflare_tunnels.yml**
+   ```yaml
+   tunnels:
+     my-tunnel-name:
+       tunnel_id: "your-tunnel-id-here"
+       description: "Description of your tunnel"
+   ```
+
+4. **Reference tunnel in zone file(s)**
+   ```yaml
+   records:
+     - name: "app"
+       type: TUNNEL
+       ttl: 300
+       tunnel:
+         name: "my-tunnel-name"
+         service: "http://internal-service:80"
+   ```
+
+5. **Apply Terraform changes** to create DNS records and routing config
+
+6. **Run the tunnel**
+   ```bash
+   cloudflared tunnel run my-tunnel-name
+   ```
+
+### Important Notes
+
+- **Tunnels must exist** in Cloudflare before adding them to `cloudflare_tunnels.yml`
+- **Tunnel records are Cloudflare-only** - they cannot be used with Route53
+- **Global tunnel definitions** in `cloudflare_tunnels.yml` can be referenced by any zone
+- **Zone-specific tunnels** (defined in zone files) override global ones with the same name
+- **The validation script** checks that referenced tunnels are defined (either globally or zone-specific)
+- **Cleanup script** properly handles tunnel-generated CNAME records
+- **TTL is informational** - tunnel CNAMEs are always proxied (TTL=1)
+
 ## Nameserver Delegation
 
 ### Delegating to Different Nameservers
@@ -169,12 +334,19 @@ Each entry under `records:` supports the following keys:
 | key | required | description |
 |-----|----------|-------------|
 | `name` | yes | Record name (use the zone name for apex records) |
-| `type` | yes | DNS record type (e.g. `A`, `CNAME`) |
+| `type` | yes | DNS record type (e.g. `A`, `CNAME`, `TUNNEL`) |
 | `ttl` | yes | Time to live in seconds |
-| `values` | yes | List of record values |
+| `values` | conditional | List of record values (not used for TUNNEL type) |
+| `tunnel` | conditional | Tunnel configuration object (required for TUNNEL type) |
 | `proxied` | no | Enable Cloudflare proxy (orange cloud). Defaults to `false` (DNS only). Only applicable for Cloudflare zones. |
 | `set_identifier` | no | Identifier for routing policies (Route53 only) |
 | `routing_policy` | no | Object describing a routing policy (Route53 only) |
+
+**Record type specifics:**
+- Standard record types (A, AAAA, CNAME, MX, TXT, etc.) require `values`
+- TUNNEL records require `tunnel` object with `name` and `service` fields
+- TUNNEL records are always proxied (ignore `proxied` field)
+- Routing policies are only supported for Route53 zones
 
 When `routing_policy` is omitted, records use **simple** routing. Routing policies are only supported for Route53 zones. Supported policy types are `weighted`, `latency`, `geolocation`, `failover`, and `multivalue`. See the example below for usage.
 

@@ -1,0 +1,18 @@
+# Cloudflare Tunnel Definitions
+# 
+# This file defines all Cloudflare tunnels that can be referenced in DNS zone files.
+# Tunnels must already exist in Cloudflare (create via cloudflared CLI or Zero Trust dashboard).
+#
+# Format:
+#   tunnel_name:
+#     tunnel_id: "tunnel-uuid-from-cloudflare"
+#     description: "Optional description of what this tunnel is for"
+#
+# To get your tunnel ID:
+#   cloudflared tunnel list
+#   OR check the Cloudflare Zero Trust dashboard
+
+tunnels:
+  homelab-k3s:
+    tunnel_id: "a80b484c-d2e9-484b-bf01-ba385ee9be7e"
+    description: "Homelab Kubernetes cluster tunnel for exposing internal services"

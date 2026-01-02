@@ -7,6 +7,7 @@ This script checks that:
 2. The provider is one of the supported values: 'route53' or 'cloudflare'
 3. The zone_name field is present and matches the filename
 4. Proxied records only use supported record types
+5. Tunnel records have valid configuration
 """
 
 import sys
@@ -20,7 +21,26 @@ SUPPORTED_PROVIDERS = frozenset(['route53', 'cloudflare'])
 # Record types that can be proxied through Cloudflare
 PROXIABLE_RECORD_TYPES = frozenset(['A', 'AAAA', 'CNAME'])
 
-def validate_zone_file(file_path):
+# Supported tunnel record types
+TUNNEL_RECORD_TYPES = frozenset(['TUNNEL'])
+
+def load_global_tunnels():
+    """Load global tunnel definitions from cloudflare_tunnels.yml."""
+    script_dir = Path(__file__).parent
+    tunnels_file = script_dir.parent / "cloudflare_tunnels.yml"
+    
+    if not tunnels_file.exists():
+        return {}
+    
+    try:
+        with open(tunnels_file, 'r') as f:
+            data = yaml.safe_load(f)
+            return data.get('tunnels', {}) if data else {}
+    except Exception as e:
+        print(f"Warning: Error loading {tunnels_file}: {e}")
+        return {}
+
+def validate_zone_file(file_path, global_tunnels):
     """Validate a single zone file."""
     errors = []
     warnings = []
@@ -89,6 +109,31 @@ def validate_zone_file(file_path):
             if len(providers) != len(set(providers)):
                 errors.append("Duplicate providers found in providers list")
     
+    # Check optional tunnels field (Cloudflare only)
+    # Merge global tunnels with zone-specific tunnels (zone-specific take precedence)
+    tunnel_definitions = dict(global_tunnels)  # Start with global tunnels
+    
+    if 'tunnels' in data:
+        if not uses_cloudflare:
+            warnings.append("'tunnels' field is defined but this zone does not use Cloudflare. Tunnels are only supported on Cloudflare zones.")
+        elif not isinstance(data['tunnels'], dict):
+            errors.append("'tunnels' field must be a dictionary/object")
+        else:
+            # Validate and merge zone-specific tunnel definitions
+            for tunnel_name, tunnel_config in data['tunnels'].items():
+                if not isinstance(tunnel_config, dict):
+                    errors.append(f"Tunnel '{tunnel_name}' configuration must be a dictionary/object")
+                    continue
+                    
+                # Tunnel ID is required
+                if 'tunnel_id' not in tunnel_config:
+                    errors.append(f"Tunnel '{tunnel_name}' is missing required field: tunnel_id")
+                elif not isinstance(tunnel_config['tunnel_id'], str):
+                    errors.append(f"Tunnel '{tunnel_name}' tunnel_id must be a string")
+                    
+                # Add to tunnel definitions (overrides global if same name)
+                tunnel_definitions[tunnel_name] = tunnel_config
+    
     # Check records field
     if 'records' not in data:
         errors.append("Missing required field: records")
@@ -103,6 +148,43 @@ def validate_zone_file(file_path):
             
             record_type = record.get('type', '').upper()
             record_name = record.get('name', '<unnamed>')
+            
+            # Special validation for TUNNEL records
+            if record_type == 'TUNNEL':
+                if not uses_cloudflare:
+                    errors.append(f"Record at index {i} ({record_name}, {record_type}): TUNNEL records are only supported on Cloudflare zones")
+                
+                # Validate tunnel field
+                if 'tunnel' not in record:
+                    errors.append(f"Record at index {i} ({record_name}, {record_type}): Missing required 'tunnel' field")
+                elif not isinstance(record['tunnel'], dict):
+                    errors.append(f"Record at index {i} ({record_name}, {record_type}): 'tunnel' field must be a dictionary/object")
+                else:
+                    tunnel = record['tunnel']
+                    
+                    # Validate tunnel name
+                    if 'name' not in tunnel:
+                        errors.append(f"Record at index {i} ({record_name}, {record_type}): Missing required 'tunnel.name' field")
+                    elif not isinstance(tunnel['name'], str):
+                        errors.append(f"Record at index {i} ({record_name}, {record_type}): 'tunnel.name' must be a string")
+                    elif tunnel['name'] not in tunnel_definitions:
+                        errors.append(f"Record at index {i} ({record_name}, {record_type}): Referenced tunnel '{tunnel['name']}' is not defined in 'tunnels' section")
+                    
+                    # Validate service URL
+                    if 'service' not in tunnel:
+                        errors.append(f"Record at index {i} ({record_name}, {record_type}): Missing required 'tunnel.service' field")
+                    elif not isinstance(tunnel['service'], str):
+                        errors.append(f"Record at index {i} ({record_name}, {record_type}): 'tunnel.service' must be a string")
+                    elif not tunnel['service'].startswith(('http://', 'https://', 'tcp://', 'udp://', 'ssh://', 'rdp://', 'unix://', 'unix+tls://')):
+                        errors.append(f"Record at index {i} ({record_name}, {record_type}): 'tunnel.service' must start with a valid protocol (http://, https://, tcp://, udp://, ssh://, rdp://, unix://, unix+tls://)")
+                
+                # TUNNEL records shouldn't have values or proxied fields
+                if 'values' in record:
+                    warnings.append(f"Record at index {i} ({record_name}, {record_type}): 'values' field is ignored for TUNNEL records")
+                if 'proxied' in record:
+                    warnings.append(f"Record at index {i} ({record_name}, {record_type}): 'proxied' field is ignored for TUNNEL records (tunnels are always proxied)")
+                
+                continue  # Skip other validation for tunnel records
                 
             # Check optional proxied field (Cloudflare only)
             if 'proxied' in record:
@@ -153,6 +235,11 @@ def main():
         print(f"Error: dns_zones directory not found at {zones_dir}")
         sys.exit(1)
     
+    # Load global tunnel definitions
+    global_tunnels = load_global_tunnels()
+    if global_tunnels:
+        print(f"ℹ️  Loaded {len(global_tunnels)} global tunnel(s) from cloudflare_tunnels.yml")
+    
     # Find all .yml files in the zones directory
     zone_files = list(zones_dir.glob("*.yml"))
     
@@ -164,7 +251,7 @@ def main():
     total_warnings = 0
     
     for zone_file in sorted(zone_files):
-        errors, warnings = validate_zone_file(zone_file)
+        errors, warnings = validate_zone_file(zone_file, global_tunnels)
         
         if errors:
             print(f"\n❌ {zone_file.name}:")
