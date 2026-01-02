@@ -33,9 +33,9 @@ locals {
     yamldecode(file("${path.module}/../dns_zones/${file}")).zone_name =>
     yamldecode(file("${path.module}/../dns_zones/${file}"))
   }
-  
+
   # Load global tunnel definitions
-  tunnels_file = "${path.module}/../cloudflare_tunnels.yml"
+  tunnels_file   = "${path.module}/../cloudflare_tunnels.yml"
   global_tunnels = fileexists(local.tunnels_file) ? yamldecode(file(local.tunnels_file)).tunnels : {}
 
   # Helper function to get providers for a zone (supports both single and multi-provider formats)
@@ -100,11 +100,11 @@ locals {
         values = upper(r.type) == "MX" && can(r.mx_records) ? [
           for mx in r.mx_records : "${mx.priority} ${mx.value}"
         ] : r.values
-        proxied = try(r.proxied, false)                    # Default to DNS only (false) if not specified
+        proxied = try(r.proxied, false)                                                 # Default to DNS only (false) if not specified
       } if upper(r.type) != "NS" && upper(r.type) != "SOA" && upper(r.type) != "TUNNEL" # Exclude NS, SOA, and TUNNEL
     ]
   ])
-  
+
   # Extract tunnel definitions - merge global tunnels with zone-specific tunnels
   # Zone-specific tunnels take precedence over global ones (if same name)
   tunnel_definitions = flatten([
@@ -116,32 +116,32 @@ locals {
       }
     ]
   ])
-  
+
   # Map tunnel names to their IDs for lookup (scoped by zone)
   tunnel_id_map = {
     for t in local.tunnel_definitions :
     "${t.zone_name}:${t.tunnel_name}" => t.tunnel_id
   }
-  
+
   # Also create a global tunnel lookup for validation
   all_tunnel_names = merge(local.global_tunnels, {
     for zname, z in local.cloudflare_zones :
     zname => try(z.tunnels, {})
   }...)
-  
+
   # Extract tunnel records (TUNNEL type)
   tunnel_records = flatten([
     for zname, z in local.cloudflare_zones : [
       for r in z.records : {
-        zone_name    = zname
-        hostname     = r.name == zname ? zname : "${r.name}.${zname}"
-        tunnel_name  = r.tunnel.name
-        tunnel_id    = local.tunnel_id_map["${zname}:${r.tunnel.name}"]
-        service      = r.tunnel.service
+        zone_name   = zname
+        hostname    = r.name == zname ? zname : "${r.name}.${zname}"
+        tunnel_name = r.tunnel.name
+        tunnel_id   = local.tunnel_id_map["${zname}:${r.tunnel.name}"]
+        service     = r.tunnel.service
       } if upper(r.type) == "TUNNEL"
     ]
   ])
-  
+
   # Create map for tunnel config resources
   tunnel_config_map = {
     for t in local.tunnel_records :
@@ -282,7 +282,7 @@ resource "cloudflare_tunnel_config" "this" {
       hostname = each.value.hostname
       service  = each.value.service
     }
-    
+
     # Required catch-all rule for traffic that doesn't match any hostname
     ingress_rule {
       service = "http_status:404"
@@ -300,7 +300,7 @@ resource "cloudflare_record" "tunnel" {
   content = "${each.value.tunnel_id}.cfargotunnel.com"
   ttl     = 1
   proxied = true
-  
+
   depends_on = [cloudflare_tunnel_config.this]
 }
 
