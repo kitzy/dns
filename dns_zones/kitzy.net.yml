@@ -2,6 +2,7 @@ zone_name: "kitzy.net"
 providers:
   - route53
   - cloudflare
+
 records:
   - name: "kitzy.net"
     type: NS
@@ -42,3 +43,10 @@ records:
       - "keybase-site-verification=t-u9Qz4iU7oOd4DMKH0FHW69b_Xo-oCXh7dTaPxmmb0"
       - "google-site-verification=RCPsMhka0hUhhhjWGMPboyjoMoFiNMMlyntpCQsjlvg"
       - "1password-site-verification=UFL2MKVZ6JABTLXTDKHM7ARGEQ"
+  # Cloudflare Tunnel record - routes hello.kitzy.net to internal k3s service
+  - name: "hello"
+    type: TUNNEL
+    ttl: 300
+    tunnel:
+      name: "homelab-k3s"
+      service: "http://hello-world.hello-world.svc.cluster.local:80"

@@ -7,6 +7,7 @@ import argparse
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DNS_ZONES_DIR = os.path.join(REPO_ROOT, "dns_zones")
+TUNNELS_FILE = os.path.join(REPO_ROOT, "cloudflare_tunnels.yml")
 
 # Get Cloudflare API credentials from environment
 CLOUDFLARE_API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN")
@@ -21,9 +22,29 @@ HEADERS = {
 BASE_URL = "https://api.cloudflare.com/client/v4"
 
 
-def load_defined_records(zone_data, zone_name):
+def load_global_tunnels():
+    """Load global tunnel definitions from cloudflare_tunnels.yml."""
+    if not os.path.exists(TUNNELS_FILE):
+        return {}
+    
+    try:
+        with open(TUNNELS_FILE, 'r') as f:
+            data = yaml.safe_load(f)
+            return data.get('tunnels', {}) if data else {}
+    except Exception as e:
+        print(f"Warning: Error loading {TUNNELS_FILE}: {e}", file=sys.stderr)
+        return {}
+
+
+def load_defined_records(zone_data, zone_name, global_tunnels):
     """Load all defined records from the YAML configuration."""
     records = set()
+    tunnel_hostnames = set()
+    
+    # Merge global tunnels with zone-specific tunnels (zone-specific take precedence)
+    tunnels = dict(global_tunnels)
+    tunnels.update(zone_data.get("tunnels", {}))
+    
     for rec in zone_data.get("records", []):
         rtype = rec["type"].upper()
         if rtype in ("NS", "SOA"):
@@ -37,7 +58,15 @@ def load_defined_records(zone_data, zone_name):
             fqdn = f"{name}.{zone_name}"
         
         # Handle different record types
-        if rtype == "MX":
+        if rtype == "TUNNEL":
+            # For tunnel records, we create CNAME records pointing to the tunnel
+            tunnel_name = rec.get("tunnel", {}).get("name")
+            if tunnel_name and tunnel_name in tunnels:
+                tunnel_id = tunnels[tunnel_name]["tunnel_id"]
+                tunnel_cname = f"{tunnel_id}.cfargotunnel.com"
+                records.add((fqdn, "CNAME", tunnel_cname))
+                tunnel_hostnames.add(fqdn)
+        elif rtype == "MX":
             # For MX records, we track each priority/value pair
             for mx in rec.get("mx_records", []):
                 records.add((fqdn, rtype, mx["priority"], mx["value"]))
@@ -46,7 +75,7 @@ def load_defined_records(zone_data, zone_name):
             for value in rec.get("values", []):
                 records.add((fqdn, rtype, value))
     
-    return records
+    return records, tunnel_hostnames
 
 
 def get_zone_id(zone_name):
@@ -136,6 +165,11 @@ def main():
     if debug:
         print("Debug mode enabled")
     
+    # Load global tunnel definitions
+    global_tunnels = load_global_tunnels()
+    if debug and global_tunnels:
+        print(f"Loaded {len(global_tunnels)} global tunnel(s)")
+    
     for filename in os.listdir(DNS_ZONES_DIR):
         if not filename.endswith(".yml"):
             continue
@@ -162,12 +196,16 @@ def main():
         print(f"\nProcessing zone: {zone_name}")
         
         # Load defined records
-        defined = load_defined_records(zone_data, zone_name)
+        defined, tunnel_hostnames = load_defined_records(zone_data, zone_name, global_tunnels)
         
         if debug:
             print(f"\n  Defined records ({len(defined)}):")
             for rec in sorted(defined):
                 print(f"    {rec}")
+            if tunnel_hostnames:
+                print(f"\n  Tunnel hostnames ({len(tunnel_hostnames)}):")
+                for hostname in sorted(tunnel_hostnames):
+                    print(f"    {hostname}")
         
         # Get Cloudflare zone ID
         zone_id = get_zone_id(zone_name)

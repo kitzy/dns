@@ -33,6 +33,10 @@ locals {
     yamldecode(file("${path.module}/../dns_zones/${file}")).zone_name =>
     yamldecode(file("${path.module}/../dns_zones/${file}"))
   }
+  
+  # Load global tunnel definitions
+  tunnels_file = "${path.module}/../cloudflare_tunnels.yml"
+  global_tunnels = fileexists(local.tunnels_file) ? yamldecode(file(local.tunnels_file)).tunnels : {}
 
   # Helper function to get providers for a zone (supports both single and multi-provider formats)
   zone_providers = {
@@ -97,9 +101,52 @@ locals {
           for mx in r.mx_records : "${mx.priority} ${mx.value}"
         ] : r.values
         proxied = try(r.proxied, false)                    # Default to DNS only (false) if not specified
-      } if upper(r.type) != "NS" && upper(r.type) != "SOA" # Exclude NS and SOA - auto-managed
+      } if upper(r.type) != "NS" && upper(r.type) != "SOA" && upper(r.type) != "TUNNEL" # Exclude NS, SOA, and TUNNEL
     ]
   ])
+  
+  # Extract tunnel definitions - merge global tunnels with zone-specific tunnels
+  # Zone-specific tunnels take precedence over global ones (if same name)
+  tunnel_definitions = flatten([
+    for zname, z in local.cloudflare_zones : [
+      for tunnel_name, tunnel_config in merge(local.global_tunnels, try(z.tunnels, {})) : {
+        zone_name   = zname
+        tunnel_name = tunnel_name
+        tunnel_id   = tunnel_config.tunnel_id
+      }
+    ]
+  ])
+  
+  # Map tunnel names to their IDs for lookup (scoped by zone)
+  tunnel_id_map = {
+    for t in local.tunnel_definitions :
+    "${t.zone_name}:${t.tunnel_name}" => t.tunnel_id
+  }
+  
+  # Also create a global tunnel lookup for validation
+  all_tunnel_names = merge(local.global_tunnels, {
+    for zname, z in local.cloudflare_zones :
+    zname => try(z.tunnels, {})
+  }...)
+  
+  # Extract tunnel records (TUNNEL type)
+  tunnel_records = flatten([
+    for zname, z in local.cloudflare_zones : [
+      for r in z.records : {
+        zone_name    = zname
+        hostname     = r.name == zname ? zname : "${r.name}.${zname}"
+        tunnel_name  = r.tunnel.name
+        tunnel_id    = local.tunnel_id_map["${zname}:${r.tunnel.name}"]
+        service      = r.tunnel.service
+      } if upper(r.type) == "TUNNEL"
+    ]
+  ])
+  
+  # Create map for tunnel config resources
+  tunnel_config_map = {
+    for t in local.tunnel_records :
+    "${t.zone_name}_${t.hostname}" => t
+  }
   route53_record_map = {
     for r in local.route53_records : "${r.zone_name}_${r.name}_${r.type}${r.set_identifier != null ? "_${r.set_identifier}" : ""}" => r
   }
@@ -222,6 +269,41 @@ resource "cloudflare_record" "this" {
   proxied  = each.value.proxied
 }
 
+# Cloudflare Tunnel Configuration Resources
+# Note: This manages the tunnel routing configuration (hostname -> service mapping)
+# The actual tunnel must already exist in Cloudflare (created via cloudflared or dashboard)
+resource "cloudflare_tunnel_config" "this" {
+  for_each   = local.tunnel_config_map
+  account_id = var.CLOUDFLARE_ACCOUNT_ID
+  tunnel_id  = each.value.tunnel_id
+
+  config {
+    ingress_rule {
+      hostname = each.value.hostname
+      service  = each.value.service
+    }
+    
+    # Required catch-all rule for traffic that doesn't match any hostname
+    ingress_rule {
+      service = "http_status:404"
+    }
+  }
+}
+
+# Create CNAME records for tunnel hostnames
+resource "cloudflare_record" "tunnel" {
+  for_each = local.tunnel_config_map
+
+  zone_id = cloudflare_zone.this[each.value.zone_name].id
+  name    = each.value.hostname == each.value.zone_name ? "@" : split(".${each.value.zone_name}", each.value.hostname)[0]
+  type    = "CNAME"
+  content = "${each.value.tunnel_id}.cfargotunnel.com"
+  ttl     = 1
+  proxied = true
+  
+  depends_on = [cloudflare_tunnel_config.this]
+}
+
 # Output nameservers for Route53 zones
 output "route53_nameservers" {
   description = "Route53 zone nameservers (AWS-assigned)"
@@ -243,5 +325,19 @@ output "cloudflare_nameservers" {
   value = {
     for zname, zone in cloudflare_zone.this :
     zname => zone.name_servers
+  }
+}
+
+# Output tunnel configurations
+output "tunnel_configurations" {
+  description = "Cloudflare tunnel hostname mappings"
+  value = {
+    for k, v in local.tunnel_config_map :
+    k => {
+      hostname    = v.hostname
+      tunnel_name = v.tunnel_name
+      tunnel_id   = v.tunnel_id
+      service     = v.service
+    }
   }
 }
