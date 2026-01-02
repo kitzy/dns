@@ -96,7 +96,7 @@ locals {
         values = upper(r.type) == "MX" && can(r.mx_records) ? [
           for mx in r.mx_records : "${mx.priority} ${mx.value}"
         ] : r.values
-        proxied = try(r.proxied, false) # Default to DNS only (false) if not specified
+        proxied = try(r.proxied, false)                    # Default to DNS only (false) if not specified
       } if upper(r.type) != "NS" && upper(r.type) != "SOA" # Exclude NS and SOA - auto-managed
     ]
   ])
