@@ -3,6 +3,7 @@ providers:
   - route53
   - cloudflare
 records:
+
   - name: "*"
     ttl: 300
     type: A

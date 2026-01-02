@@ -49,20 +49,6 @@ def validate_zone_file(file_path):
         if actual_filename != expected_filename:
             errors.append(f"Filename '{actual_filename}' does not match zone_name '{zone_name}' (expected '{expected_filename}')")
     
-    # Check optional nameservers field
-    if 'nameservers' in data:
-        nameservers = data['nameservers']
-        if not isinstance(nameservers, list):
-            errors.append(f"Nameservers must be a list, got {type(nameservers).__name__}")
-        elif len(nameservers) == 0:
-            errors.append("Nameservers list cannot be empty")
-        else:
-            for i, ns in enumerate(nameservers):
-                if not isinstance(ns, str):
-                    errors.append(f"Nameserver at index {i} must be a string, got {type(ns).__name__}")
-                elif not ns.strip():
-                    errors.append(f"Nameserver at index {i} cannot be empty or whitespace only")
-    
     # Check provider field(s) - support both single and multi-provider formats
     has_provider = 'provider' in data
     has_providers = 'providers' in data
