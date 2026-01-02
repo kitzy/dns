@@ -85,10 +85,10 @@ locals {
         ttl       = r.ttl
         values = upper(r.type) == "MX" && can(r.mx_records) ? [
           for mx in r.mx_records : "${mx.priority} ${mx.value}"
-        ] : r.values
+        ] : try(r.values, [])
         set_identifier = try(r.set_identifier, null)
         routing_policy = try(r.routing_policy, null)
-      } if upper(r.type) != "NS" && upper(r.type) != "SOA" # Exclude NS and SOA - auto-managed
+      } if upper(r.type) != "NS" && upper(r.type) != "SOA" && upper(r.type) != "TUNNEL" # Exclude NS, SOA, and TUNNEL
     ]
   ])
 
