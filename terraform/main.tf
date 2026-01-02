@@ -102,7 +102,7 @@ locals {
         ttl       = r.ttl
         values = upper(r.type) == "MX" && can(r.mx_records) ? [
           for mx in r.mx_records : "${mx.priority} ${mx.value}"
-        ] : r.values
+        ] : try(r.values, [])
         proxied = try(r.proxied, false)                                                 # Default to DNS only (false) if not specified
       } if upper(r.type) != "NS" && upper(r.type) != "SOA" && upper(r.type) != "TUNNEL" # Exclude NS, SOA, and TUNNEL
     ]
@@ -269,7 +269,7 @@ resource "cloudflare_record" "this" {
 # Cloudflare Tunnel Configuration Resources
 # Note: This manages the tunnel routing configuration (hostname -> service mapping)
 # The actual tunnel must already exist in Cloudflare (created via cloudflared or dashboard)
-resource "cloudflare_tunnel_config" "this" {
+resource "cloudflare_zero_trust_tunnel_cloudflared_config" "this" {
   for_each   = local.tunnel_config_map
   account_id = var.CLOUDFLARE_ACCOUNT_ID
   tunnel_id  = each.value.tunnel_id
@@ -298,7 +298,7 @@ resource "cloudflare_record" "tunnel" {
   ttl     = 1
   proxied = true
 
-  depends_on = [cloudflare_tunnel_config.this]
+  depends_on = [cloudflare_zero_trust_tunnel_cloudflared_config.this]
 }
 
 # Output nameservers for Route53 zones
