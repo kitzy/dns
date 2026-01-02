@@ -89,6 +89,42 @@ The multi-provider format enables **zero-downtime migrations**:
 
 ⚠️ **Important**: Either `provider` or `providers` field is **required**. You cannot specify both.
 
+## Nameserver Configuration
+
+### Route53 Nameservers
+
+When using Route53, AWS automatically assigns nameservers to each hosted zone. You can optionally specify custom nameservers in your zone file for documentation purposes:
+
+```yaml
+zone_name: "example.com"
+provider: route53
+nameservers:
+  - "ns-1234.awsdns-12.org"
+  - "ns-5678.awsdns-34.com"
+  - "ns-9012.awsdns-56.net"
+  - "ns-3456.awsdns-78.co.uk"
+records: [...]
+```
+
+**Important Notes:**
+- The `nameservers` field is **for reference only** when using Route53
+- AWS Route53 automatically assigns nameservers when a hosted zone is created
+- You cannot override the AWS-assigned nameservers through the Route53 API
+- The actual nameservers assigned by AWS are available in the Terraform output `route53_nameservers`
+- To use custom nameservers, you must update your domain registrar to point to the AWS-assigned nameservers (or use Route53 as your registrar with delegation sets)
+
+### Checking Nameservers
+
+After applying Terraform changes, you can view the assigned nameservers:
+
+```bash
+cd terraform
+terraform output route53_nameservers
+terraform output cloudflare_nameservers
+```
+
+Then update your domain registrar's nameserver settings to point to these values.
+
 ## Adding or modifying zones
 
 1. Create a new YAML file in `dns_zones/` with the zone name. See the existing files for structure.
@@ -107,9 +143,10 @@ Each zone file supports the following top-level keys:
 | `zone_name` | yes | The domain name for the zone |
 | `provider` | no* | Single DNS provider: `route53` or `cloudflare` |
 | `providers` | no* | List of DNS providers: `[route53, cloudflare]` |
+| `nameservers` | no | List of custom nameservers (Route53 only, for reference) |
+| `records` | yes | Array of DNS records for the zone |
 
 *Either `provider` or `providers` is required, but not both.
-| `records` | yes | Array of DNS records for the zone |
 
 ### Record format
 

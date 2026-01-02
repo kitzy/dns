@@ -1,5 +1,8 @@
 zone_name: "kitzysound.com"
 provider: cloudflare
+nameservers:
+  - "achiel.ns.cloudflare.com"
+  - "ullis.ns.cloudflare.com"
 records:
   - name: "kitzysound.com"
     type: "A"

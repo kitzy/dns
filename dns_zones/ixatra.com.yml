@@ -2,6 +2,9 @@ zone_name: "ixatra.com"
 providers:
   - route53
   - cloudflare
+nameservers:
+  - "achiel.ns.cloudflare.com"
+  - "ullis.ns.cloudflare.com"
 records:
   - name: "ixatra.com"
     ttl: 300
