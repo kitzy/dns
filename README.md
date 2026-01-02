@@ -89,29 +89,41 @@ The multi-provider format enables **zero-downtime migrations**:
 
 ⚠️ **Important**: Either `provider` or `providers` field is **required**. You cannot specify both.
 
-## Nameserver Configuration
+## Nameserver Delegation
 
-### Route53 Nameservers
+### Delegating to Different Nameservers
 
-When using Route53, AWS automatically assigns nameservers to each hosted zone. You can optionally specify custom nameservers in your zone file for documentation purposes:
+To delegate a Route53 hosted zone to use different nameservers (such as Cloudflare), add NS records to the zone file:
 
 ```yaml
 zone_name: "example.com"
-provider: route53
-nameservers:
-  - "ns-1234.awsdns-12.org"
-  - "ns-5678.awsdns-34.com"
-  - "ns-9012.awsdns-56.net"
-  - "ns-3456.awsdns-78.co.uk"
-records: [...]
+providers:
+  - route53
+  - cloudflare
+records:
+  - name: "example.com"
+    type: NS
+    ttl: 172800
+    values:
+      - "achiel.ns.cloudflare.com"
+      - "ullis.ns.cloudflare.com"
+  # ... other records
 ```
 
-**Important Notes:**
-- The `nameservers` field is **for reference only** when using Route53
-- AWS Route53 automatically assigns nameservers when a hosted zone is created
-- You cannot override the AWS-assigned nameservers through the Route53 API
-- The actual nameservers assigned by AWS are available in the Terraform output `route53_nameservers`
-- To use custom nameservers, you must update your domain registrar to point to the AWS-assigned nameservers (or use Route53 as your registrar with delegation sets)
+**How this works:**
+- The NS records will be created in the Route53 hosted zone, pointing to the Cloudflare nameservers
+- **Terraform automatically updates the domain registrar** (AWS Route53 Domains) with these nameservers
+- DNS resolution for the domain is delegated to Cloudflare
+- The TTL of 172800 (48 hours) is recommended for NS records
+
+**Migration workflow:**
+1. Add both `route53` and `cloudflare` as providers
+2. Add NS records pointing to Cloudflare nameservers in the zone file (as shown above)
+3. Commit and apply via Terraform - **nameservers are automatically updated at the registrar**
+4. Wait for DNS propagation (24-48 hours)
+5. Optionally remove Route53 from providers list once fully migrated
+
+**Important:** This only works for domains registered through AWS Route53. If your domain is registered elsewhere (GoDaddy, Namecheap, etc.), you must manually update the nameservers at your registrar.
 
 ### Checking Nameservers
 
@@ -121,9 +133,10 @@ After applying Terraform changes, you can view the assigned nameservers:
 cd terraform
 terraform output route53_nameservers
 terraform output cloudflare_nameservers
+terraform output domain_registrar_nameservers
 ```
 
-Then update your domain registrar's nameserver settings to point to these values.
+The `domain_registrar_nameservers` output shows which nameservers are configured at the domain registrar level for AWS Route53 registered domains.
 
 ## Adding or modifying zones
 
@@ -143,7 +156,6 @@ Each zone file supports the following top-level keys:
 | `zone_name` | yes | The domain name for the zone |
 | `provider` | no* | Single DNS provider: `route53` or `cloudflare` |
 | `providers` | no* | List of DNS providers: `[route53, cloudflare]` |
-| `nameservers` | no | List of custom nameservers (Route53 only, for reference) |
 | `records` | yes | Array of DNS records for the zone |
 
 *Either `provider` or `providers` is required, but not both.

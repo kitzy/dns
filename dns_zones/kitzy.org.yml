@@ -2,10 +2,13 @@ zone_name: "kitzy.org"
 providers:
   - route53
   - cloudflare
-nameservers:
-  - "achiel.ns.cloudflare.com"
-  - "ullis.ns.cloudflare.com"
 records:
+  - name: "kitzy.org"
+    type: NS
+    ttl: 172800
+    values:
+      - "achiel.ns.cloudflare.com"
+      - "ullis.ns.cloudflare.com"
   - name: "*"
     ttl: 300
     type: A

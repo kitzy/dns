@@ -1,9 +1,6 @@
 zone_name: "kitzy.com"
 providers:
   - cloudflare
-nameservers:
-  - "achiel.ns.cloudflare.com"
-  - "ullis.ns.cloudflare.com"
 records:
   - name: "kitzy.com"
     ttl: 1
