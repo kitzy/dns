@@ -125,12 +125,6 @@ locals {
     "${t.zone_name}:${t.tunnel_name}" => t.tunnel_id
   }
 
-  # Also create a global tunnel lookup for validation
-  all_tunnel_names = merge(local.global_tunnels, {
-    for zname, z in local.cloudflare_zones :
-    zname => try(z.tunnels, {})
-  }...)
-
   # Extract tunnel records (TUNNEL type)
   tunnel_records = flatten([
     for zname, z in local.cloudflare_zones : [
