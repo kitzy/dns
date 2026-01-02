@@ -269,6 +269,7 @@ resource "cloudflare_record" "this" {
 # Cloudflare Tunnel Configuration Resources
 # Note: This manages the tunnel routing configuration (hostname -> service mapping)
 # The actual tunnel must already exist in Cloudflare (created via cloudflared or dashboard)
+# Requires API token with "Account > Cloudflare Tunnel: Edit" permission
 resource "cloudflare_zero_trust_tunnel_cloudflared_config" "this" {
   for_each   = local.tunnel_config_map
   account_id = var.CLOUDFLARE_ACCOUNT_ID
@@ -297,6 +298,7 @@ resource "cloudflare_record" "tunnel" {
   content = "${each.value.tunnel_id}.cfargotunnel.com"
   ttl     = 1
   proxied = true
+  comment = "Tunnel: ${each.value.tunnel_name} -> ${each.value.service}"
 
   depends_on = [cloudflare_zero_trust_tunnel_cloudflared_config.this]
 }
