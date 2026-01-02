@@ -1,5 +1,5 @@
 zone_name: "leftofthedial.fm"
-providers: 
+providers:
   - route53
   - cloudflare
 
