@@ -93,7 +93,7 @@ The multi-provider format enables **zero-downtime migrations**:
 
 ### Delegating to Different Nameservers
 
-To delegate a Route53 hosted zone to use different nameservers (such as Cloudflare), add NS records to the zone file:
+To delegate a domain to use Cloudflare nameservers, add NS records to the zone file:
 
 ```yaml
 zone_name: "example.com"
@@ -111,8 +111,10 @@ records:
 ```
 
 **How this works:**
-- The NS records will be created in the Route53 hosted zone, pointing to the Cloudflare nameservers
-- **Terraform automatically updates the domain registrar** (AWS Route53 Domains) with these nameservers
+- NS records in the zone file are used **only** to update the domain registrar
+- **If NS records are present**, Terraform assumes the domain is registered through AWS Route53 and automatically updates the registration
+- **If NS records are omitted**, no registrar updates are performed (use this for domains registered elsewhere)
+- NS records are **NOT** created in the Route53 or Cloudflare hosted zones (they're auto-managed by AWS/Cloudflare)
 - DNS resolution for the domain is delegated to Cloudflare
 - The TTL of 172800 (48 hours) is recommended for NS records
 

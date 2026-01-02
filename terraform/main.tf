@@ -57,7 +57,7 @@ locals {
   }
 
   # Extract nameservers from NS records for registered domain management
-  # Find zones with apex NS records that need registrar updates
+  # If NS records are present for the apex, assume domain is registered via AWS
   domain_nameservers = {
     for zname, z in local.route53_zones : zname => distinct(flatten([
       for r in z.records :
@@ -81,7 +81,7 @@ locals {
         ] : r.values
         set_identifier = try(r.set_identifier, null)
         routing_policy = try(r.routing_policy, null)
-      } if upper(r.type) != "SOA" # Allow NS records, but not SOA
+      } if upper(r.type) != "NS" && upper(r.type) != "SOA" # Exclude NS and SOA - auto-managed
     ]
   ])
 
@@ -97,7 +97,7 @@ locals {
           for mx in r.mx_records : "${mx.priority} ${mx.value}"
         ] : r.values
         proxied = try(r.proxied, false) # Default to DNS only (false) if not specified
-      } if upper(r.type) != "SOA"       # Allow NS records, but not SOA
+      } if upper(r.type) != "NS" && upper(r.type) != "SOA" # Exclude NS and SOA - auto-managed
     ]
   ])
   route53_record_map = {
