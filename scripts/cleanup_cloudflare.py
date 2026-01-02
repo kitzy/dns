@@ -1,231 +1,209 @@
 #!/usr/bin/env python3
-import os
-import yaml
-import requests
+"""
+Cleanup Cloudflare DNS records not managed by Terraform.
+
+Skips records managed by External DNS (identified by _external-dns- TXT records).
+"""
+
+import subprocess
+import json
 import sys
-import argparse
+from typing import Set, Dict, List
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DNS_ZONES_DIR = os.path.join(REPO_ROOT, "dns_zones")
-
-# Get Cloudflare API credentials from environment
-CLOUDFLARE_API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN")
-if not CLOUDFLARE_API_TOKEN:
-    print("Error: CLOUDFLARE_API_TOKEN environment variable not set", file=sys.stderr)
-    sys.exit(1)
-
-HEADERS = {
-    "Authorization": f"Bearer {CLOUDFLARE_API_TOKEN}",
-    "Content-Type": "application/json",
-}
-BASE_URL = "https://api.cloudflare.com/client/v4"
-
-
-def load_defined_records(zone_data, zone_name):
-    """Load all defined records from the YAML configuration."""
-    records = set()
-    for rec in zone_data.get("records", []):
-        rtype = rec["type"].upper()
-        if rtype in ("NS", "SOA"):
-            continue
-        
-        name = rec["name"]
-        # Normalize FQDN
-        if name == zone_name or name.endswith("." + zone_name):
-            fqdn = name
-        else:
-            fqdn = f"{name}.{zone_name}"
-        
-        # Handle different record types
-        if rtype == "MX":
-            # For MX records, we track each priority/value pair
-            for mx in rec.get("mx_records", []):
-                records.add((fqdn, rtype, mx["priority"], mx["value"]))
-        else:
-            # For other record types, track each value
-            for value in rec.get("values", []):
-                records.add((fqdn, rtype, value))
-    
-    return records
-
-
-def get_zone_id(zone_name):
-    """Get the Cloudflare zone ID for a given zone name."""
-    resp = requests.get(
-        f"{BASE_URL}/zones",
-        headers=HEADERS,
-        params={"name": zone_name},
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    
-    if not data["success"]:
-        raise Exception(f"Failed to get zone: {data.get('errors')}")
-    
-    zones = data["result"]
-    if not zones:
-        return None
-    
-    return zones[0]["id"]
-
-
-def get_dns_records(zone_id):
-    """Get all DNS records for a zone."""
-    records = []
-    page = 1
-    per_page = 100
-    
-    while True:
-        resp = requests.get(
-            f"{BASE_URL}/zones/{zone_id}/dns_records",
-            headers=HEADERS,
-            params={"page": page, "per_page": per_page},
+def get_terraform_managed_records() -> Set[str]:
+    """Get set of record names managed by Terraform."""
+    try:
+        result = subprocess.run(
+            ["terraform", "show", "-json"],
+            capture_output=True,
+            text=True,
+            check=True
         )
-        resp.raise_for_status()
-        data = resp.json()
         
-        if not data["success"]:
-            raise Exception(f"Failed to get DNS records: {data.get('errors')}")
+        state = json.loads(result.stdout)
+        managed_records = set()
         
-        records.extend(data["result"])
+        if "values" in state and "root_module" in state["values"]:
+            resources = state["values"]["root_module"].get("resources", [])
+            
+            for resource in resources:
+                if resource["type"] == "cloudflare_record":
+                    name = resource["values"]["name"]
+                    zone = resource["values"]["zone_id"]
+                    managed_records.add(f"{zone}:{name}")
         
-        # Check if there are more pages
-        result_info = data.get("result_info", {})
-        total_pages = result_info.get("total_pages", 1)
-        if page >= total_pages:
-            break
-        page += 1
+        return managed_records
     
-    return records
+    except subprocess.CalledProcessError as e:
+        print(f"Error running terraform show: {e}", file=sys.stderr)
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        print(f"Error parsing terraform state: {e}", file=sys.stderr)
+        sys.exit(1)
 
-
-def delete_dns_record(zone_id, record_id, name, rtype, content, dry_run=False):
-    """Delete a DNS record."""
-    if dry_run:
-        print(f"[DRY-RUN] Would delete {name} {rtype} = {content}")
-        return
+def get_external_dns_managed_records(zone_id: str, api_token: str) -> Set[str]:
+    """Get set of record names managed by External DNS."""
+    try:
+        import requests
+        
+        headers = {
+            "Authorization": f"Bearer {api_token}",
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.get(
+            f"https://api.cloudflare.com/client/v4/zones/{zone_id}/dns_records",
+            headers=headers,
+            params={"type": "TXT", "per_page": 1000}
+        )
+        response.raise_for_status()
+        
+        external_dns_records = set()
+        for record in response.json()["result"]:
+            # External DNS creates TXT records like "_external-dns-hello.kitzy.net"
+            if record["name"].startswith("_external-dns-"):
+                # Extract the actual record name
+                # "_external-dns-hello.kitzy.net" -> "hello.kitzy.net"
+                actual_name = record["name"].replace("_external-dns-", "", 1)
+                external_dns_records.add(actual_name)
+        
+        return external_dns_records
     
-    print(f"Deleting {name} {rtype}")
-    resp = requests.delete(
-        f"{BASE_URL}/zones/{zone_id}/dns_records/{record_id}",
-        headers=HEADERS,
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    
-    if not data["success"]:
-        raise Exception(f"Failed to delete record: {data.get('errors')}")
+    except Exception as e:
+        print(f"Warning: Could not fetch External DNS records: {e}", file=sys.stderr)
+        return set()
 
+def get_cloudflare_records(zone_id: str, api_token: str) -> List[Dict]:
+    """Get all DNS records from Cloudflare."""
+    try:
+        import requests
+        
+        headers = {
+            "Authorization": f"Bearer {api_token}",
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.get(
+            f"https://api.cloudflare.com/client/v4/zones/{zone_id}/dns_records",
+            headers=headers,
+            params={"per_page": 1000}
+        )
+        response.raise_for_status()
+        
+        return response.json()["result"]
+    
+    except Exception as e:
+        print(f"Error fetching Cloudflare records: {e}", file=sys.stderr)
+        sys.exit(1)
+
+def should_skip_record(record: Dict, external_dns_managed: Set[str]) -> bool:
+    """Determine if a record should be skipped from cleanup."""
+    name = record["name"]
+    record_type = record["type"]
+    
+    # Skip External DNS ownership TXT records
+    if record_type == "TXT" and name.startswith("_external-dns-"):
+        return True
+    
+    # Skip records managed by External DNS
+    if name in external_dns_managed:
+        return True
+    
+    # Skip root domain records (usually important)
+    if name == record["zone_name"]:
+        return True
+    
+    # Skip common infrastructure records
+    skip_patterns = [
+        "_acme-challenge",  # Let's Encrypt challenges
+        "_dmarc",           # Email authentication
+        "_domainkey",       # DKIM records
+    ]
+    
+    for pattern in skip_patterns:
+        if pattern in name:
+            return True
+    
+    return False
 
 def main():
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(description="Clean up stray DNS records in Cloudflare")
-    parser.add_argument("--dry-run", action="store_true", help="Show what would be deleted without actually deleting")
-    parser.add_argument("--debug", action="store_true", help="Enable debug output")
-    args = parser.parse_args()
+    # Get configuration from environment or Terraform
+    zone_id = subprocess.run(
+        ["terraform", "output", "-raw", "zone_id"],
+        capture_output=True,
+        text=True,
+        check=True
+    ).stdout.strip()
     
-    # Also check environment variables for backwards compatibility
-    debug = args.debug or os.environ.get("DEBUG", "").lower() in ("1", "true", "yes")
-    dry_run = args.dry_run or os.environ.get("DRY_RUN", "").lower() in ("1", "true", "yes")
+    api_token = subprocess.run(
+        ["op", "read", "op://GitHub/CloudflareAPI/API_TOKEN"],
+        capture_output=True,
+        text=True,
+        check=True
+    ).stdout.strip()
     
-    if dry_run:
-        print("=" * 60)
-        print("DRY-RUN MODE: No records will be deleted")
-        print("=" * 60)
+    print(f"Checking DNS records for zone {zone_id}...")
     
-    if debug:
-        print("Debug mode enabled")
+    # Get managed records
+    terraform_managed = get_terraform_managed_records()
+    external_dns_managed = get_external_dns_managed_records(zone_id, api_token)
+    cloudflare_records = get_cloudflare_records(zone_id, api_token)
     
-    for filename in os.listdir(DNS_ZONES_DIR):
-        if not filename.endswith(".yml"):
+    print(f"Terraform manages {len(terraform_managed)} records")
+    print(f"External DNS manages {len(external_dns_managed)} records")
+    print(f"Cloudflare has {len(cloudflare_records)} total records")
+    
+    # Find records to delete
+    records_to_delete = []
+    
+    for record in cloudflare_records:
+        record_key = f"{zone_id}:{record['name']}"
+        
+        # Skip if managed by Terraform
+        if record_key in terraform_managed:
             continue
         
-        path = os.path.join(DNS_ZONES_DIR, filename)
-        with open(path, "r") as f:
-            zone_data = yaml.safe_load(f)
-        
-        zone_name = zone_data["zone_name"]
-        
-        # Check if this zone uses Cloudflare
-        provider = zone_data.get("provider")
-        providers = zone_data.get("providers", [])
-        
-        # Handle both single provider and multiple providers
-        is_cloudflare = (
-            provider == "cloudflare" or
-            "cloudflare" in providers
-        )
-        
-        if not is_cloudflare:
+        # Skip if managed by External DNS or matches skip patterns
+        if should_skip_record(record, external_dns_managed):
+            print(f"Skipping {record['type']} record: {record['name']} (External DNS or protected)")
             continue
         
-        print(f"\nProcessing zone: {zone_name}")
-        
-        # Load defined records
-        defined = load_defined_records(zone_data, zone_name)
-        
-        if debug:
-            print(f"\n  Defined records ({len(defined)}):")
-            for rec in sorted(defined):
-                print(f"    {rec}")
-        
-        # Get Cloudflare zone ID
-        zone_id = get_zone_id(zone_name)
-        if zone_id is None:
-            print(f"  Zone not found in Cloudflare, skipping")
-            continue
-        
-        # Get existing DNS records
-        existing_records = get_dns_records(zone_id)
-        
-        # Check each existing record
-        for record in existing_records:
-            rtype = record["type"].upper()
-            
-            # Skip NS and SOA records (managed by Cloudflare)
-            if rtype in ("NS", "SOA"):
-                continue
-            
-            name = record["name"]
-            record_id = record["id"]
-            
-            # Check if this record is defined in our configuration
-            should_delete = False
-            
-            if rtype == "MX":
-                # For MX records, check priority and content
-                priority = record.get("priority")
-                content = record.get("content")
-                key = (name, rtype, priority, content)
-                if key not in defined:
-                    should_delete = True
-            else:
-                # For other record types, check content
-                content = record.get("content")
-                
-                # TXT records in Cloudflare API are returned with surrounding quotes
-                # Strip them for comparison with YAML values
-                if rtype == "TXT" and content and content.startswith('"') and content.endswith('"'):
-                    content = content[1:-1]
-                
-                key = (name, rtype, content)
-                if key not in defined:
-                    should_delete = True
-                    if debug:
-                        print(f"\n  NOT FOUND in defined records:")
-                        print(f"    Cloudflare key: {key}")
-                        # Show similar keys for debugging
-                        similar = [d for d in defined if d[0] == name and d[1] == rtype]
-                        if similar:
-                            print(f"    Similar defined records for {name} {rtype}:")
-                            for s in similar:
-                                print(f"      {s}")
-                        else:
-                            print(f"    No records found for {name} {rtype}")
-            
-            if should_delete:
-                delete_dns_record(zone_id, record_id, name, rtype, content, dry_run=dry_run)
-
+        records_to_delete.append(record)
+    
+    if not records_to_delete:
+        print("\nNo unmanaged records found. All clean!")
+        return
+    
+    # Show records to delete
+    print(f"\nFound {len(records_to_delete)} unmanaged records:")
+    for record in records_to_delete:
+        print(f"  - {record['type']} {record['name']} -> {record['content']}")
+    
+    # Confirm deletion
+    response = input("\nDelete these records? [y/N]: ")
+    if response.lower() != 'y':
+        print("Aborted.")
+        return
+    
+    # Delete records
+    import requests
+    headers = {
+        "Authorization": f"Bearer {api_token}",
+        "Content-Type": "application/json"
+    }
+    
+    for record in records_to_delete:
+        try:
+            response = requests.delete(
+                f"https://api.cloudflare.com/client/v4/zones/{zone_id}/dns_records/{record['id']}",
+                headers=headers
+            )
+            response.raise_for_status()
+            print(f"Deleted {record['type']} record: {record['name']}")
+        except Exception as e:
+            print(f"Error deleting {record['name']}: {e}", file=sys.stderr)
+    
+    print("\nCleanup complete!")
 
 if __name__ == "__main__":
     main()
