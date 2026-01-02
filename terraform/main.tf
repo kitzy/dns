@@ -36,9 +36,10 @@ locals {
 
   # Load global tunnel definitions
   tunnels_file = "${path.module}/../cloudflare_tunnels.yml"
-  global_tunnels = fileexists(local.tunnels_file) ? (
-    yamldecode(file(local.tunnels_file)).tunnels
-  ) : {}
+  global_tunnels = try(
+    yamldecode(file(local.tunnels_file)).tunnels,
+    {}
+  )
 
   # Helper function to get providers for a zone (supports both single and multi-provider formats)
   zone_providers = {
