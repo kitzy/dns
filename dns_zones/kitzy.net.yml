@@ -50,3 +50,9 @@ records:
     tunnel:
       name: "homelab-k3s"
       service: "https://hello-world.hello-world.svc.cluster.local:443"
+  - name: "fleet"
+    type: TUNNEL
+    ttl: 300
+    tunnel:
+      name: "homelab-k3s"
+      service: "https://fleet.fleet.svc.cluster.local:8080"
