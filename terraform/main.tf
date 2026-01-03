@@ -363,11 +363,9 @@ output "tunnel_configurations" {
   value = {
     for k, v in local.tunnel_config_map :
     k => {
-      hostname    = v.hostname
-      tunnel_name = v.tunnel_name
-      tunnel_id   = v.tunnel_id
-      ca_pool     = v.ca_pool
-      service     = v.service
+      tunnel_id     = v.tunnel_id
+      ca_pool       = v.ca_pool
+      ingress_rules = v.ingress_rules
     }
   }
 }
