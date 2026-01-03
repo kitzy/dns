@@ -163,6 +163,12 @@ locals {
       ]
     }
   }
+
+  # Create a map for CNAME records (one per hostname)
+  tunnel_cname_map = {
+    for t in local.tunnel_records :
+    "${t.zone_name}_${t.hostname}" => t
+  }
   route53_record_map = {
     for r in local.route53_records : "${r.zone_name}_${r.name}_${r.type}${r.set_identifier != null ? "_${r.set_identifier}" : ""}" => r
   }
@@ -320,7 +326,7 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "this" {
 
 # Create CNAME records for tunnel hostnames
 resource "cloudflare_record" "tunnel" {
-  for_each = local.tunnel_config_map
+  for_each = local.tunnel_cname_map
 
   zone_id = cloudflare_zone.this[each.value.zone_name].id
   name    = each.value.hostname == each.value.zone_name ? "@" : split(".${each.value.zone_name}", each.value.hostname)[0]
