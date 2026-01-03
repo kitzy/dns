@@ -126,7 +126,7 @@ locals {
     for t in local.tunnel_definitions :
     "${t.zone_name}:${t.tunnel_name}" => t.tunnel_id
   }
-  
+
   # Map tunnel names to their ca_pool for lookup (scoped by zone)
   tunnel_ca_pool_map = {
     for t in local.tunnel_definitions :
