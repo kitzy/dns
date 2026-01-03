@@ -147,10 +147,20 @@ locals {
     ]
   ])
 
-  # Create map for tunnel config resources
+  # Group tunnel records by tunnel_id to create single config per tunnel
   tunnel_config_map = {
-    for t in local.tunnel_records :
-    "${t.zone_name}_${t.hostname}" => t
+    for tunnel_id in distinct([for t in local.tunnel_records : t.tunnel_id]) :
+    tunnel_id => {
+      tunnel_id = tunnel_id
+      ca_pool   = [for t in local.tunnel_records : t.ca_pool if t.tunnel_id == tunnel_id][0]
+      ingress_rules = [
+        for t in local.tunnel_records :
+        {
+          hostname = t.hostname
+          service  = t.service
+        } if t.tunnel_id == tunnel_id
+      ]
+    }
   }
   route53_record_map = {
     for r in local.route53_records : "${r.zone_name}_${r.name}_${r.type}${r.set_identifier != null ? "_${r.set_identifier}" : ""}" => r
@@ -278,17 +288,22 @@ resource "cloudflare_record" "this" {
 # Note: This manages the tunnel routing configuration (hostname -> service mapping)
 # The actual tunnel must already exist in Cloudflare (created via cloudflared or dashboard)
 # Requires API token with "Account > Cloudflare Tunnel: Edit" permission
+# All hostnames using the same tunnel are grouped into a single configuration
 resource "cloudflare_zero_trust_tunnel_cloudflared_config" "this" {
   for_each   = local.tunnel_config_map
   account_id = var.CLOUDFLARE_ACCOUNT_ID
-  tunnel_id  = each.value.tunnel_id
+  tunnel_id  = each.key
 
   config {
-    ingress_rule {
-      hostname = each.value.hostname
-      service  = each.value.service
-      origin_request {
-        ca_pool = each.value.ca_pool
+    # Create an ingress rule for each hostname using this tunnel
+    dynamic "ingress_rule" {
+      for_each = each.value.ingress_rules
+      content {
+        hostname = ingress_rule.value.hostname
+        service  = ingress_rule.value.service
+        origin_request {
+          ca_pool = each.value.ca_pool
+        }
       }
     }
 
