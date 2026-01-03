@@ -147,8 +147,25 @@ locals {
     ]
   ])
 
-  # Create map for tunnel config resources
+  # Group tunnel records by tunnel_id to create single config per tunnel
   tunnel_config_map = {
+    for tunnel_id in distinct([for t in local.tunnel_records : t.tunnel_id]) :
+    tunnel_id => {
+      tunnel_id = tunnel_id
+      ca_pool   = try([for t in local.tunnel_records : t.ca_pool if t.tunnel_id == tunnel_id][0], null)
+      ingress_rules = [
+        for t in local.tunnel_records :
+        {
+          hostname = t.hostname
+          service  = t.service
+          ca_pool  = t.ca_pool
+        } if t.tunnel_id == tunnel_id
+      ]
+    }
+  }
+
+  # Create a map for CNAME records (one per hostname)
+  tunnel_cname_map = {
     for t in local.tunnel_records :
     "${t.zone_name}_${t.hostname}" => t
   }
@@ -278,17 +295,25 @@ resource "cloudflare_record" "this" {
 # Note: This manages the tunnel routing configuration (hostname -> service mapping)
 # The actual tunnel must already exist in Cloudflare (created via cloudflared or dashboard)
 # Requires API token with "Account > Cloudflare Tunnel: Edit" permission
+# All hostnames using the same tunnel are grouped into a single configuration
 resource "cloudflare_zero_trust_tunnel_cloudflared_config" "this" {
   for_each   = local.tunnel_config_map
   account_id = var.CLOUDFLARE_ACCOUNT_ID
-  tunnel_id  = each.value.tunnel_id
+  tunnel_id  = each.key
 
   config {
-    ingress_rule {
-      hostname = each.value.hostname
-      service  = each.value.service
-      origin_request {
-        ca_pool = each.value.ca_pool
+    # Create an ingress rule for each hostname using this tunnel
+    dynamic "ingress_rule" {
+      for_each = each.value.ingress_rules
+      content {
+        hostname = ingress_rule.value.hostname
+        service  = ingress_rule.value.service
+        dynamic "origin_request" {
+          for_each = ingress_rule.value.ca_pool != null ? [1] : []
+          content {
+            ca_pool = ingress_rule.value.ca_pool
+          }
+        }
       }
     }
 
@@ -301,7 +326,7 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "this" {
 
 # Create CNAME records for tunnel hostnames
 resource "cloudflare_record" "tunnel" {
-  for_each = local.tunnel_config_map
+  for_each = local.tunnel_cname_map
 
   zone_id = cloudflare_zone.this[each.value.zone_name].id
   name    = each.value.hostname == each.value.zone_name ? "@" : split(".${each.value.zone_name}", each.value.hostname)[0]
@@ -344,11 +369,9 @@ output "tunnel_configurations" {
   value = {
     for k, v in local.tunnel_config_map :
     k => {
-      hostname    = v.hostname
-      tunnel_name = v.tunnel_name
-      tunnel_id   = v.tunnel_id
-      ca_pool     = v.ca_pool
-      service     = v.service
+      tunnel_id     = v.tunnel_id
+      ca_pool       = v.ca_pool
+      ingress_rules = v.ingress_rules
     }
   }
 }
