@@ -49,4 +49,4 @@ records:
     ttl: 300
     tunnel:
       name: "homelab-k3s"
-      service: "http://hello-world.hello-world.svc.cluster.local:80"
+      service: "https://hello-world.hello-world.svc.cluster.local:443"
