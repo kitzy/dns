@@ -152,12 +152,13 @@ locals {
     for tunnel_id in distinct([for t in local.tunnel_records : t.tunnel_id]) :
     tunnel_id => {
       tunnel_id = tunnel_id
-      ca_pool   = [for t in local.tunnel_records : t.ca_pool if t.tunnel_id == tunnel_id][0]
+      ca_pool   = try([for t in local.tunnel_records : t.ca_pool if t.tunnel_id == tunnel_id][0], null)
       ingress_rules = [
         for t in local.tunnel_records :
         {
           hostname = t.hostname
           service  = t.service
+          ca_pool  = t.ca_pool
         } if t.tunnel_id == tunnel_id
       ]
     }
@@ -301,8 +302,11 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "this" {
       content {
         hostname = ingress_rule.value.hostname
         service  = ingress_rule.value.service
-        origin_request {
-          ca_pool = each.value.ca_pool
+        dynamic "origin_request" {
+          for_each = ingress_rule.value.ca_pool != null ? [1] : []
+          content {
+            ca_pool = ingress_rule.value.ca_pool
+          }
         }
       }
     }
