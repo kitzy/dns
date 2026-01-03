@@ -116,6 +116,7 @@ locals {
         zone_name   = zname
         tunnel_name = tunnel_name
         tunnel_id   = tunnel_config.tunnel_id
+        ca_pool     = try(tunnel_config.ca_pool, null)
       }
     ]
   ])
@@ -124,6 +125,12 @@ locals {
   tunnel_id_map = {
     for t in local.tunnel_definitions :
     "${t.zone_name}:${t.tunnel_name}" => t.tunnel_id
+  }
+  
+  # Map tunnel names to their ca_pool for lookup (scoped by zone)
+  tunnel_ca_pool_map = {
+    for t in local.tunnel_definitions :
+    "${t.zone_name}:${t.tunnel_name}" => t.ca_pool
   }
 
   # Extract tunnel records (TUNNEL type)
@@ -134,6 +141,7 @@ locals {
         hostname    = r.name == zname ? zname : "${r.name}.${zname}"
         tunnel_name = r.tunnel.name
         tunnel_id   = local.tunnel_id_map["${zname}:${r.tunnel.name}"]
+        ca_pool     = local.tunnel_ca_pool_map["${zname}:${r.tunnel.name}"]
         service     = r.tunnel.service
       } if upper(r.type) == "TUNNEL"
     ]
@@ -279,6 +287,9 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "this" {
     ingress_rule {
       hostname = each.value.hostname
       service  = each.value.service
+      origin_request {
+        ca_pool = each.value.ca_pool
+      }
     }
 
     # Required catch-all rule for traffic that doesn't match any hostname
@@ -336,6 +347,7 @@ output "tunnel_configurations" {
       hostname    = v.hostname
       tunnel_name = v.tunnel_name
       tunnel_id   = v.tunnel_id
+      ca_pool     = v.ca_pool
       service     = v.service
     }
   }
