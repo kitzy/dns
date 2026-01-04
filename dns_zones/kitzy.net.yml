@@ -56,3 +56,8 @@ records:
     tunnel:
       name: "homelab-k3s"
       service: "https://fleet.fleet.svc.cluster.local:8080"
+  - name: "scanopy"
+    type: TUNNEL
+    tunnel:
+      name: "homelab-k3s"
+      service: "https://scanopy-server.scanopy.svc.cluster.local:60072"
