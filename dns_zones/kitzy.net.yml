@@ -60,4 +60,4 @@ records:
     type: TUNNEL
     tunnel:
       name: "homelab-k3s"
-      service: "https://scanopy-server.scanopy.svc.cluster.local:60072"
+      service: "http://scanopy-server.scanopy.svc.cluster.local:60072"
