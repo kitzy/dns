@@ -50,6 +50,12 @@ records:
     tunnel:
       name: "homelab-k3s"
       service: "https://hello-world.hello-world.svc.cluster.local:443"
+  - name: "auth"
+    type: TUNNEL
+    ttl: 300
+    tunnel:
+      name: "homelab-k3s"
+      service: "https://authentik-server.authentik.svc.cluster.local:9443"
   - name: "fleet"
     type: TUNNEL
     ttl: 300
