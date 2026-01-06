@@ -62,4 +62,3 @@ records:
     tunnel:
       name: "homelab-k3s"
       service: "https://fleet.fleet.svc.cluster.local:8080"
-      
