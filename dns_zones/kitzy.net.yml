@@ -1,6 +1,5 @@
 zone_name: "kitzy.net"
 providers:
-  - route53
   - cloudflare
 
 records:
