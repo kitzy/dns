@@ -65,8 +65,9 @@ locals {
 
   # Extract nameservers from NS records for registered domain management
   # If NS records are present for the apex, assume domain is registered via AWS
+  # This works for all zones (Route53 or Cloudflare) to update registrar nameservers
   domain_nameservers = {
-    for zname, z in local.route53_zones : zname => distinct(flatten([
+    for zname, z in local.zones : zname => distinct(flatten([
       for r in z.records :
       r.values if upper(r.type) == "NS" && r.name == zname
       ])) if length(flatten([
