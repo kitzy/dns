@@ -220,11 +220,13 @@ resource "aws_route53domains_registered_domain" "this" {
       admin_contact,
       registrant_contact,
       tech_contact,
+      billing_contact,
       auto_renew,
       transfer_lock,
       admin_privacy,
       registrant_privacy,
       tech_privacy,
+      billing_privacy,
     ]
   }
 }
